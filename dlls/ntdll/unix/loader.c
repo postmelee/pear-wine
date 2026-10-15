@@ -23,6 +23,7 @@
 #endif
 
 #include "config.h"
+#include "wine/pear_bootstrap.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -436,6 +437,170 @@ char *get_alternate_wineloader( WORD machine )
 }
 
 
+#if defined(__APPLE__) && defined(__aarch64__)
+/* Bounded, opt-in observations only. A Mach read is a snapshot, not proof that
+ * posix_spawn's later copyin or opaque attribute validation will succeed.
+ * Never print copied bytes, pointer values, paths or environment contents. */
+#define PEAR_SPAWN_AUDIT_ENTRIES 4096u
+#define PEAR_SPAWN_AUDIT_STRING (128u * 1024u)
+#define PEAR_SPAWN_AUDIT_BYTES (1024u * 1024u)
+struct pear_spawn_audit
+{
+    const char *outcome, *part;
+    unsigned int index, offset, entries, bytes, reads;
+    int error;
+};
+
+static int pear_spawn_audit_read( uintptr_t address, void *buffer, size_t size,
+                                  struct pear_spawn_audit *audit )
+{
+    mach_vm_size_t copied = 0;
+    kern_return_t ret;
+
+    if (address > UINTPTR_MAX - size)
+    {
+        audit->outcome = "overflow";
+        return 0;
+    }
+    audit->reads++;
+    ret = mach_vm_read_overwrite( mach_task_self(), address, size, (uintptr_t)buffer, &copied );
+    if (ret != KERN_SUCCESS || copied != size)
+    {
+        audit->outcome = "unreadable";
+        audit->error = ret != KERN_SUCCESS ? ret : KERN_FAILURE;
+        return 0;
+    }
+    return 1;
+}
+
+static void pear_spawn_audit_string( uintptr_t address, struct pear_spawn_audit *audit )
+{
+    unsigned int offset = 0, count, i;
+    unsigned char buffer[256];
+
+    audit->part = "string";
+    while (offset < PEAR_SPAWN_AUDIT_STRING && audit->bytes < PEAR_SPAWN_AUDIT_BYTES)
+    {
+        audit->offset = offset;
+        if (address > UINTPTR_MAX - offset)
+        {
+            audit->outcome = "overflow";
+            return;
+        }
+        /* Do not read across the smallest supported page boundary, even if
+         * the string terminates immediately before an inaccessible page. */
+        count = 4096 - ((address + offset) & 4095);
+        if (count > sizeof(buffer)) count = sizeof(buffer);
+        if (count > PEAR_SPAWN_AUDIT_STRING - offset) count = PEAR_SPAWN_AUDIT_STRING - offset;
+        if (count > PEAR_SPAWN_AUDIT_BYTES - audit->bytes) count = PEAR_SPAWN_AUDIT_BYTES - audit->bytes;
+        if (!pear_spawn_audit_read( address + offset, buffer, count, audit )) return;
+        for (i = 0; i < count; i++)
+        {
+            audit->bytes++;
+            if (!buffer[i]) return;
+        }
+        offset += count;
+    }
+    audit->offset = offset;
+    audit->outcome = "limit";
+}
+
+static void pear_spawn_audit_vector( uintptr_t address, struct pear_spawn_audit *audit )
+{
+    uintptr_t entry;
+    unsigned int i;
+
+    for (i = 0; i <= PEAR_SPAWN_AUDIT_ENTRIES; i++)
+    {
+        audit->part = "vector";
+        audit->index = i;
+        audit->offset = 0;
+        if (address > UINTPTR_MAX - i * sizeof(entry))
+        {
+            audit->outcome = "overflow";
+            return;
+        }
+        if (!pear_spawn_audit_read( address + i * sizeof(entry), &entry, sizeof(entry), audit )) return;
+        if (!entry) return;
+        if (i == PEAR_SPAWN_AUDIT_ENTRIES)
+        {
+            audit->outcome = "limit";
+            return;
+        }
+        pear_spawn_audit_string( entry, audit );
+        if (strcmp( audit->outcome, "ok" )) return;
+        audit->entries++;
+    }
+}
+
+static void pear_spawn_audit_event( const char *event, const char *details )
+{
+    int saved_errno = errno;
+    /* Private diagnostic stderr only; do not extend the authenticated runner
+     * protocol or change the outcome when an observation cannot be written. */
+    fprintf( stderr, "{\"version\":1,\"record_kind\":\"pear_spawn_diagnostic\","
+             "\"pid\":%ld,\"event\":\"%s\"%s}\n", (long)getpid(), event, details );
+    errno = saved_errno;
+}
+
+static void pear_spawn_audit_report( const char *kind, const struct pear_spawn_audit *audit )
+{
+    char detail[512];
+
+    snprintf( detail, sizeof(detail),
+              ",\"kind\":\"%s\",\"outcome\":\"%s\",\"part\":\"%s\","
+              "\"index\":%u,\"offset\":%u,\"entries\":%u,\"bytes\":%u,\"reads\":%u,\"error\":%d",
+              kind, audit->outcome, audit->part, audit->index, audit->offset,
+              audit->entries, audit->bytes, audit->reads, audit->error );
+    pear_spawn_audit_event( "spawn_input_audit", detail );
+}
+
+static void pear_spawn_audit_inputs( const char *path, char *const *argv, char *const *envp,
+                                    const posix_spawnattr_t *attr )
+{
+    struct pear_spawn_audit audit = {.outcome = "ok", .part = "string"};
+    posix_spawnattr_t storage = NULL;
+    unsigned char byte;
+    unsigned char (*get_mode)(void) = dlsym( RTLD_DEFAULT, "os_custom_x18_abi_enabled" );
+    char detail[128];
+
+    snprintf( detail, sizeof(detail), ",\"foreign_mode\":%d,\"user_page\":%ld",
+              get_mode ? !!get_mode() : -1, sysconf(_SC_PAGESIZE) );
+    pear_spawn_audit_event( "spawn_input_context", detail );
+    pear_spawn_audit_string( (uintptr_t)path, &audit );
+    pear_spawn_audit_report( "path", &audit );
+    audit = (struct pear_spawn_audit){.outcome = "ok", .part = "vector"};
+    pear_spawn_audit_vector( (uintptr_t)argv, &audit );
+    pear_spawn_audit_report( "argv", &audit );
+    audit = (struct pear_spawn_audit){.outcome = "ok", .part = "vector"};
+    pear_spawn_audit_vector( (uintptr_t)envp, &audit );
+    pear_spawn_audit_report( "envp", &audit );
+    audit = (struct pear_spawn_audit){.outcome = "ok", .part = "object"};
+    if (pear_spawn_audit_read( (uintptr_t)attr, &storage, sizeof(storage), &audit ))
+    {
+        /* The public object is an opaque pointer. Only probe its first byte;
+         * no private payload layout or size is assumed. */
+        audit.part = "storage_first_byte";
+        pear_spawn_audit_read( (uintptr_t)storage, &byte, sizeof(byte), &audit );
+    }
+    pear_spawn_audit_report( "attr", &audit );
+}
+
+static int pear_spawn_diagnostics_enabled(void)
+{
+    const char *value = getenv( "PEAR_SPAWN_DIAGNOSTICS" );
+    return pear_bootstrap_enabled() && value && !strcmp( value, "1" );
+}
+
+static void pear_spawn_audit_step( const char *operation, int error )
+{
+    char detail[128];
+    snprintf( detail, sizeof(detail), ",\"operation\":\"%s\",\"error\":%d", operation, error );
+    pear_spawn_audit_event( "spawn_call_result", detail );
+}
+#endif
+
+
 static void preloader_exec( char **argv )
 {
 #ifdef HAVE_WINE_PRELOADER
@@ -452,7 +617,57 @@ static void preloader_exec( char **argv )
     execv( argv[0], argv );
     free( argv[0] );
 #endif
+#if defined(__APPLE__) && defined(__aarch64__)
+    {
+        typedef int (*set_4k_page_size_fn)(const posix_spawnattr_t *);
+        set_4k_page_size_fn set_4k_page_size;
+        posix_spawnattr_t attr;
+        int ret, diagnostics;
+
+        /* Every Wine loader exec, including process.c's forked child route,
+         * requests the guest page mode explicitly. Never retry in host mode. */
+        set_4k_page_size = (set_4k_page_size_fn)dlsym( RTLD_DEFAULT, "posix_spawnattr_set_4k_page_size_np" );
+        if (!set_4k_page_size)
+        {
+            if (pear_bootstrap_enabled()) pear_bootstrap_failure( "loader", "page_setter", ENOSYS );
+            errno = ENOSYS;
+            return;
+        }
+        if ((ret = posix_spawnattr_init( &attr )))
+        {
+            if (pear_bootstrap_enabled()) pear_bootstrap_failure( "loader", "spawn_attr_init", ret );
+            errno = ret;
+            return;
+        }
+        if (pear_bootstrap_enabled())
+        {
+            if (pear_bootstrap_number( "PEAR_BOOTSTRAP_GENERATION", 0, 1 ))
+                pear_bootstrap_failure( "loader", "reexec_loop", ELOOP );
+            pear_bootstrap_event( "loader", "loader_reexec", ",\"next_generation\":1" );
+            if (setenv( "PEAR_BOOTSTRAP_GENERATION", "1", 1 ))
+                pear_bootstrap_failure( "loader", "reexec_generation", errno );
+        }
+        diagnostics = pear_spawn_diagnostics_enabled();
+        ret = posix_spawnattr_setflags( &attr, POSIX_SPAWN_SETEXEC );
+        if (diagnostics) pear_spawn_audit_step( "setflags", ret );
+        if (!ret)
+        {
+            ret = set_4k_page_size( &attr );
+            if (diagnostics) pear_spawn_audit_step( "set_4k_page_size", ret );
+        }
+        if (!ret)
+        {
+            if (diagnostics) pear_spawn_audit_inputs( argv[1], argv + 1, environ, &attr );
+            ret = posix_spawn( NULL, argv[1], NULL, &attr, argv + 1, environ );
+            if (diagnostics) pear_spawn_audit_step( "posix_spawn", ret );
+        }
+        posix_spawnattr_destroy( &attr );
+        if (pear_bootstrap_enabled()) pear_bootstrap_failure( "loader", "loader_spawn", ret );
+        errno = ret;
+    }
+#else
     execv( argv[1], argv + 1 );
+#endif
 }
 
 /* exec the appropriate wine loader for the specified machine */
@@ -492,8 +707,24 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const struct pe_image_info 
     snprintf( preloader_reserve, sizeof(preloader_reserve), "WINEPRELOADRESERVE=%x%08x-%x%08x",
              (UINT)(res_start >> 32), (UINT)res_start, (UINT)(res_end >> 32), (UINT)res_end );
 
+#if defined(__APPLE__) && defined(__aarch64__)
+    /* The exec environment must own these strings. Wine's Unix stack may sit
+     * near the task address limit, where Darwin copyinstr's full maximum-range
+     * check can reject even a short, readable stack string during exec. */
+    if (setenv( "WINEPRELOADRESERVE", preloader_reserve + sizeof("WINEPRELOADRESERVE=") - 1, 1 ) ||
+        setenv( "WINESERVERSOCKET", socket_env + sizeof("WINESERVERSOCKET=") - 1, 1 ))
+    {
+        int error = errno;
+        NTSTATUS status;
+        if (pear_bootstrap_enabled()) pear_bootstrap_failure( "loader", "exec_environment", error );
+        status = errno_to_status( error );
+        errno = error;
+        return status;
+    }
+#else
     putenv( preloader_reserve );
     putenv( socket_env );
+#endif
 
     return loader_exec( argv, machine );
 }
@@ -537,6 +768,7 @@ void start_server( BOOL debug )
     char *argv[3];
     static char debug_flag[] = "-d";
 
+    if (pear_bootstrap_enabled()) pear_bootstrap_failure( "loader", "unowned_server_fallback", EPERM );
     if (!started)
     {
         int status;
@@ -1005,6 +1237,10 @@ static NTSTATUS unwind_builtin_dll( void *args )
 #endif /* SO_DLLS_SUPPORTED */
 
 
+extern NTSTATUS pear_abi_unix_entry( void *args );
+extern NTSTATUS pear_stage4_unix_entry( void *args );
+extern NTSTATUS pear_fex_memory_unix_entry( void *args );
+
 static const unixlib_entry_t unix_call_funcs[] =
 {
     load_so_dll,
@@ -1015,7 +1251,12 @@ static const unixlib_entry_t unix_call_funcs[] =
     unixcall_wine_server_handle_to_fd,
     unixcall_wine_spawnvp,
     system_time_precise,
+    pear_abi_unix_entry,
+    pear_stage4_unix_entry,
+    pear_fex_memory_unix_entry,
 };
+C_ASSERT(unix_pear_fex_memory == 10);
+C_ASSERT(ARRAY_SIZE(unix_call_funcs) == PEAR_FEX_MEMORY_UNIX_INDEX+1);
 
 
 #ifdef _WIN64
@@ -1854,6 +2095,9 @@ static void start_main_thread(void)
     struct thread_data *data = virtual_alloc_first_thread_data();
 
     server_init_process( data );
+    /* Stop after Wine's real first-thread protocol, before PE mapping, x18
+     * guest ownership, syscall-frame entry, or Windows process startup. */
+    pear_bootstrap_stop( user_shared_data );
     virtual_map_user_shared_data();
     init_cpu_info();
     init_files();
@@ -1978,6 +2222,8 @@ static int pre_exec(void)
 
 static int pre_exec(void)
 {
+    /* Exercise the real installed loader's SETEXEC route for this diagnostic. */
+    if (pear_bootstrap_enabled()) return 1;
     if (build_dir)
     {
         char *path = getenv( "DYLD_LIBRARY_PATH" );
@@ -2102,6 +2348,7 @@ DECLSPEC_EXPORT void __wine_main( int argc, char *argv[] )
     main_argc = argc;
     main_argv = argv;
 
+    pear_bootstrap_snapshot( "loader", "ntdll_entry" );
     init_paths();
     if (!getenv( "WINELOADERNOEXEC" ) || argc <= 1) check_command_line( argc, argv );
     unsetenv( "WINELOADERNOEXEC" );

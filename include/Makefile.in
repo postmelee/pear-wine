@@ -1139,6 +1139,9 @@ SOURCES = \
 	wine/nsi.h \
 	wine/opengl_driver.h \
 	wine/orpc.idl \
+	wine/pear_bootstrap.h \
+	wine/pear_fex_memory.h \
+	wine/pear_stage3.h \
 	wine/plugplay.idl \
 	wine/rbtree.h \
 	wine/schrpc.idl \

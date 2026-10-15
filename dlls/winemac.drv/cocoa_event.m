@@ -28,6 +28,8 @@
 #import "cocoa_event.h"
 #import "cocoa_app.h"
 #import "cocoa_window.h"
+#include "stage5_protocol.h"
+#include "stage5_census.h"
 
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 
@@ -226,6 +228,8 @@ static const OSType WineHotKeySignature = 'Wine';
             else
             {
                 lastEvent->event->type = MOUSE_MOVED_ABSOLUTE;
+                pear_stage5_census_object(PEAR_S5_CENSUS_EVENT,PEAR_S5_CENSUS_BIND,
+                    (uintptr_t)lastEvent->event,(uintptr_t)lastEvent->event->window,lastEvent->event->type);
                 lastEvent->event->mouse_moved.x = event->event->mouse_moved.x;
                 lastEvent->event->mouse_moved.y = event->event->mouse_moved.y;
             }
@@ -328,6 +332,8 @@ static const OSType WineHotKeySignature = 'Wine';
         NSDate* timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeout];
         BOOL timedout;
 
+        pear_stage5_census_object(PEAR_S5_CENSUS_QUERY,PEAR_S5_CENSUS_BIND,
+            (uintptr_t)query,(uintptr_t)query->window,query->type);
         type = (flags & WineQueryNoPreemptWait) ? QUERY_EVENT_NO_PREEMPT_WAIT : QUERY_EVENT;
         event = macdrv_create_event(type, query->window);
         event->query_event.query = macdrv_retain_query(query);
@@ -484,6 +490,37 @@ static const OSType WineHotKeySignature = 'Wine';
     }
 
 
+/* Snapshot of actual queued references; Stage 5 uses queue_total as one
+ * component of its finite idle observation. The existing queue
+ * lock keeps entries alive while only scalar identities and atomic reference
+ * counts are copied. No target retain, release, dereference or logging occurs. */
+void pear_stage5_queue_snapshot(void *opaque, uintptr_t target, struct pear_s5_diag_snapshot *out)
+{
+    WineEventQueue *queue = opaque;
+    out->queue_total = out->queue_target = 0;
+    out->queue_target_event_refs = out->queue_target_query_refs = 0;
+    if (!queue) return;
+
+    [queue->eventsLock lock];
+    out->queue_total = [queue->events count];
+    for (MacDrvEvent *wrapper in queue->events)
+    {
+        macdrv_event *event = wrapper->event;
+        if ((uintptr_t)event->window == target)
+        {
+            out->queue_target++;
+            out->queue_target_event_refs += (uint32_t)__atomic_load_n(&event->refs, __ATOMIC_ACQUIRE);
+        }
+        if ((event->type == QUERY_EVENT || event->type == QUERY_EVENT_NO_PREEMPT_WAIT) && event->query_event.query)
+        {
+            macdrv_query *query = event->query_event.query;
+            if ((uintptr_t)query->window == target)
+                out->queue_target_query_refs += (uint32_t)__atomic_load_n(&query->refs, __ATOMIC_ACQUIRE);
+        }
+    }
+    [queue->eventsLock unlock];
+}
+
 /***********************************************************************
  *              OnMainThread
  *
@@ -638,6 +675,8 @@ macdrv_event* macdrv_create_event(int type, WineWindow* window)
     event->deliver = INT_MAX;
     event->type = type;
     event->window = [window retain];
+    pear_stage5_census_object(PEAR_S5_CENSUS_EVENT,PEAR_S5_CENSUS_ALLOC,
+        (uintptr_t)event,(uintptr_t)window,type);
     return event;
 }
 
@@ -684,6 +723,8 @@ void macdrv_release_event(macdrv_event *event)
         }
 
         [event->window release];
+        pear_stage5_census_object(PEAR_S5_CENSUS_EVENT,PEAR_S5_CENSUS_FREE,
+            (uintptr_t)event,(uintptr_t)event->window,event->type);
         free(event);
     }
 }
@@ -698,6 +739,8 @@ macdrv_query* macdrv_create_query(void)
 
     query = calloc(1, sizeof(*query));
     query->refs = 1;
+    pear_stage5_census_object(PEAR_S5_CENSUS_QUERY,PEAR_S5_CENSUS_ALLOC,
+        (uintptr_t)query,0,0);
     return query;
 }
 
@@ -733,6 +776,8 @@ void macdrv_release_query(macdrv_query *query)
                 break;
         }
         [query->window release];
+        pear_stage5_census_object(PEAR_S5_CENSUS_QUERY,PEAR_S5_CENSUS_FREE,
+            (uintptr_t)query,(uintptr_t)query->window,query->type);
         free(query);
     }
 }

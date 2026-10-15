@@ -773,6 +773,8 @@ SUBDIRS
 READELF
 OTOOL
 LDD
+PEAR_NATIVE_ONLY_ARCH_CFLAGS
+PEAR_NATIVE_PE_PUBLICATION_CFLAGS
 WINEPRELOADER_LDFLAGS
 WINELOADER_LDFLAGS
 TOP_INSTALL_DEV
@@ -12025,6 +12027,23 @@ WINELOADER_LDFLAGS=""
 
 WINEPRELOADER_LDFLAGS=""
 
+PEAR_NATIVE_PE_PUBLICATION_CFLAGS=""
+
+PEAR_NATIVE_ONLY_ARCH_CFLAGS=""
+
+pear_native_only_archs=
+for pear_native_only_arch in $PE_ARCHS
+do
+    pear_native_only_archs="$pear_native_only_archs $pear_native_only_arch"
+done
+case "$HOST_ARCH-$host_os" in
+  aarch64-darwin*)
+    if test "$pear_native_only_archs" = " aarch64"
+    then
+        PEAR_NATIVE_ONLY_ARCH_CFLAGS="-DPEAR_NATIVE_ONLY_ARCH=1"
+    fi
+    ;;
+esac
 LIBEXT="so"
 # Extract the first word of "ldd", so it can be a program name with args.
 set dummy ldd; ac_word=$2
@@ -12349,6 +12368,11 @@ case $host_os in
 
     case $HOST_ARCH in
       i386) wine_use_preloader=yes ;;
+      aarch64)
+        PEAR_NATIVE_PE_PUBLICATION_CFLAGS="-DPEAR_NATIVE_PE_PUBLICATION=1"
+        wine_use_preloader=no
+        WINELOADER_LDFLAGS="-Wl,-x86_64_layout_emulation,-segalign,0x1000,-pagezero_size,0x10000,-sectcreate,__TEXT,__info_plist,loader/wine_info.plist"
+        ;;
       x86_64)
                 { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether the compiler supports -Wl,-no_huge" >&5
 printf %s "checking whether the compiler supports -Wl,-no_huge... " >&6; }
@@ -24170,6 +24194,8 @@ TOP_INSTALL_LIB = $TOP_INSTALL_LIB
 TOP_INSTALL_DEV = $TOP_INSTALL_DEV
 WINELOADER_LDFLAGS = $WINELOADER_LDFLAGS
 WINEPRELOADER_LDFLAGS = $WINEPRELOADER_LDFLAGS
+PEAR_NATIVE_PE_PUBLICATION_CFLAGS = $PEAR_NATIVE_PE_PUBLICATION_CFLAGS
+PEAR_NATIVE_ONLY_ARCH_CFLAGS = $PEAR_NATIVE_ONLY_ARCH_CFLAGS
 LDD = $LDD
 OTOOL = $OTOOL
 READELF = $READELF

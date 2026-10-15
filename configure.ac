@@ -955,6 +955,22 @@ AC_SUBST(TOP_INSTALL_LIB,"")
 AC_SUBST(TOP_INSTALL_DEV,"")
 AC_SUBST(WINELOADER_LDFLAGS,"")
 AC_SUBST(WINEPRELOADER_LDFLAGS,"")
+AC_SUBST(PEAR_NATIVE_PE_PUBLICATION_CFLAGS,"")
+AC_SUBST(PEAR_NATIVE_ONLY_ARCH_CFLAGS,"")
+dnl Advertise only native ARM64 for the Darwin build without companion PE targets.
+pear_native_only_archs=
+for pear_native_only_arch in $PE_ARCHS
+do
+    pear_native_only_archs="$pear_native_only_archs $pear_native_only_arch"
+done
+case "$HOST_ARCH-$host_os" in
+  aarch64-darwin*)
+    if test "$pear_native_only_archs" = " aarch64"
+    then
+        PEAR_NATIVE_ONLY_ARCH_CFLAGS="-DPEAR_NATIVE_ONLY_ARCH=1"
+    fi
+    ;;
+esac
 LIBEXT="so"
 WINE_PATH_SONAME_TOOLS
 WINE_CONFIG_HELPERS
@@ -985,6 +1001,13 @@ case $host_os in
 
     case $HOST_ARCH in
       i386) wine_use_preloader=yes ;;
+      aarch64)
+        dnl Select the same immutable publication policy in native and ARM64 PE ntdll.
+        PEAR_NATIVE_PE_PUBLICATION_CFLAGS="-DPEAR_NATIVE_PE_PUBLICATION=1"
+        dnl Match the authorized Apple Silicon guest layout with a 64 KiB null guard.
+        wine_use_preloader=no
+        WINELOADER_LDFLAGS="-Wl,-x86_64_layout_emulation,-segalign,0x1000,-pagezero_size,0x10000,-sectcreate,__TEXT,__info_plist,loader/wine_info.plist"
+        ;;
       x86_64)
         dnl If the -no_huge linker option is present (added in Xcode 15.3), use zerofill sections instead of the preloader
         WINE_TRY_CFLAGS([-Wl,-no_huge],

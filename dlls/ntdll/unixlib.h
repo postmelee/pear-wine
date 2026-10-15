@@ -22,6 +22,7 @@
 #define __NTDLL_UNIXLIB_H
 
 #include "wine/unixlib.h"
+#include "wine/pear_fex_memory.h"
 
 struct _DISPATCHER_CONTEXT;
 
@@ -76,6 +77,8 @@ enum ntdll_unix_funcs
     unix_wine_server_handle_to_fd,
     unix_wine_spawnvp,
     unix_system_time_precise,
+    /* Preserve original slots0..7 and the immutable Pear baseline slots8/9. */
+    unix_pear_fex_memory = PEAR_FEX_MEMORY_UNIX_INDEX,
 };
 
 extern unixlib_handle_t __wine_unixlib_handle;

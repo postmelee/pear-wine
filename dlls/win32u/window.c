@@ -468,7 +468,7 @@ BOOL client_surface_get_size( struct client_surface *surface, SIZE *virtual_size
     return updated;
 }
 
-void use_window_client_surface( struct client_surface *surface, BOOL use )
+W32KAPI void use_window_client_surface( struct client_surface *surface, BOOL use )
 {
     TRACE( "surface %s, use %u\n", debugstr_client_surface( surface ), use );
 

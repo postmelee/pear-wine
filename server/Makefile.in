@@ -1,4 +1,5 @@
 PROGRAMS = wineserver
+EXTRADEFS = $(PEAR_NATIVE_ONLY_ARCH_CFLAGS)
 
 SOURCES = \
 	alpc.c \

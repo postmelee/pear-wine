@@ -19,6 +19,7 @@
  */
 
 #include "config.h"
+#include "wine/pear_bootstrap.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -246,6 +247,8 @@ int main( int argc, char *argv[] )
     setvbuf( stderr, NULL, _IOLBF, 0 );
     server_argv0 = argv[0];
     parse_options( argc, argv, "d::fhk::p::vw", long_options, option_callback );
+    if (pear_bootstrap_enabled() && !foreground)
+        pear_bootstrap_failure( "server", "foreground_required", EINVAL );
 
     /* setup temporary handlers before the real signal initialization is done */
     signal( SIGPIPE, SIG_IGN );
@@ -266,6 +269,8 @@ int main( int argc, char *argv[] )
     init_directories( load_intl_file() );
     init_threading();
     init_registry();
+    pear_bootstrap_snapshot( "server", "server_ready" );
+    pear_bootstrap_images( "server" );
     main_loop();
     return 0;
 }

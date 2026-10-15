@@ -1931,6 +1931,14 @@ static RTL_USER_PROCESS_PARAMETERS *build_initial_params(void)
         }
     }
 
+#ifdef PEAR_NATIVE_PE_PUBLICATION
+    /* The native owner already relocated this initial main image. Keep the
+     * informational status at NtMapViewOfSection, but accept this completed
+     * startup step instead of unmapping it and substituting start.exe. The
+     * DLL and alternate-loader errors above still require the fallback. */
+    if (status == STATUS_IMAGE_NOT_AT_BASE) status = STATUS_SUCCESS;
+#endif
+
     if (status)  /* try launching it through start.exe */
     {
         static const char *args[] = { "start.exe", "/exec" };

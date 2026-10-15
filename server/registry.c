@@ -1787,7 +1787,7 @@ static WCHAR *format_user_registry_path( const struct sid *sid, struct unicode_s
     return ascii_to_unicode_str( buffer, path );
 }
 
-#ifdef __aarch64__
+#if defined(__aarch64__) && (!defined(PEAR_NATIVE_ONLY_ARCH) || !defined(__APPLE__))
 static bool supports_aarch32(void)
 {
 #if defined(HAVE_SYS_PERSONALITY_H)
@@ -1814,9 +1814,11 @@ static void init_supported_machines(void)
     if (prefix_type == PREFIX_64BIT)
     {
         supported_machines[count++] = IMAGE_FILE_MACHINE_ARM64;
+#if !defined(PEAR_NATIVE_ONLY_ARCH) || !defined(__APPLE__)
         supported_machines[count++] = IMAGE_FILE_MACHINE_I386;
         if (supports_aarch32()) supported_machines[count++] = IMAGE_FILE_MACHINE_ARMNT;
         supported_machines[count++] = IMAGE_FILE_MACHINE_AMD64;
+#endif
     }
 #else
 #error Unsupported machine

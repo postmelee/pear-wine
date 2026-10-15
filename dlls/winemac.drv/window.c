@@ -26,6 +26,7 @@
 #endif
 
 #include "config.h"
+#include "pear_macdrv_metal_v1.h"
 #include "macdrv.h"
 
 #include <IOKit/pwr_mgt/IOPMLib.h>
@@ -35,6 +36,15 @@ WINE_DEFAULT_DEBUG_CHANNEL(macdrv);
 
 static pthread_mutex_t win_data_mutex;
 static CFMutableDictionaryRef win_datas;
+static UINT64 pear_metal_epoch;
+static UINT64 pear_metal_next_epoch(void)
+{
+    UINT64 old=__atomic_load_n(&pear_metal_epoch,__ATOMIC_RELAXED);
+    for(;;) {
+        if(old==UINT64_MAX) return 0;
+        if(__atomic_compare_exchange_n(&pear_metal_epoch,&old,old+1,0,__ATOMIC_RELAXED,__ATOMIC_RELAXED)) return old+1;
+    }
+}
 
 static unsigned int activate_on_focus_time;
 
@@ -170,6 +180,7 @@ static struct macdrv_win_data *alloc_win_data(HWND hwnd)
     if ((data = calloc(1, sizeof(*data))))
     {
         data->hwnd = hwnd;
+        data->pear_metal_generation = pear_metal_next_epoch();
         pthread_mutex_lock(&win_data_mutex);
         if (!win_datas)
             win_datas = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
@@ -205,6 +216,18 @@ struct macdrv_win_data *get_win_data(HWND hwnd)
 void release_win_data(struct macdrv_win_data *data)
 {
     if (data) pthread_mutex_unlock(&win_data_mutex);
+}
+/* Called on main by the private adapter. Retain under data lock, then unlock
+ * before AppKit work or the reentrant Wine main-thread handoff. */
+int32_t pear_macdrv_metal_snapshot(uint64_t hwnd,uint64_t *generation,WineContentView **view)
+{
+    struct macdrv_win_data *data;
+    *generation=0; *view=NULL;
+    if(!(data=get_win_data((HWND)(UINT_PTR)hwnd))) return PEAR_METAL_WINDOW;
+    if(!data->client_view) { release_win_data(data); return PEAR_METAL_NO_CLIENT; }
+    *generation=data->pear_metal_generation;
+    *view=data->client_view; macdrv_pear_metal_retain_view(*view);
+    release_win_data(data); return PEAR_METAL_OK;
 }
 
 
@@ -1084,8 +1107,11 @@ static void macdrv_client_surface_detach(struct client_surface *client)
 
         if ((data = get_win_data(client->hwnd)))
         {
-            if (data->client_view == surface->cocoa_view)
+            if (data->client_view == surface->cocoa_view) {
                 data->client_view = NULL;
+                data->pear_metal_generation = pear_metal_next_epoch();
+                pear_macdrv_metal_changed((UINT_PTR)data->hwnd,data->pear_metal_generation);
+            }
             release_win_data(data);
         }
 
@@ -1120,6 +1146,8 @@ static void macdrv_client_surface_present(struct client_surface *client, HDC hdc
         if (data->client_view) macdrv_set_view_hidden(data->client_view, TRUE);
         macdrv_set_view_hidden(surface->cocoa_view, FALSE);
         data->client_view = surface->cocoa_view;
+        data->pear_metal_generation = pear_metal_next_epoch();
+        pear_macdrv_metal_changed((UINT_PTR)data->hwnd,data->pear_metal_generation);
     }
     release_win_data(data);
 }
@@ -1144,7 +1172,9 @@ struct client_surface *macdrv_CreateClientSurface(HWND hwnd, int pixel_format, B
     struct macdrv_client_surface *surface;
 
     surface = client_surface_create(&macdrv_client_surface_funcs, hwnd, pixel_format, raw);
+    if (!surface) return NULL;
     surface->cocoa_view = macdrv_create_view(cgrect_from_rect(surface->client.monitor_rect));
+    if (!surface->cocoa_view) { client_surface_release(&surface->client); return NULL; }
     macdrv_set_view_hidden(surface->cocoa_view, TRUE);
 
     if (surface)
@@ -1155,6 +1185,8 @@ struct client_surface *macdrv_CreateClientSurface(HWND hwnd, int pixel_format, B
 
     return &surface->client;
 }
+
+#include "pear_surface_owner.h"
 
 bool macdrv_client_surface_acquire_metal_swapchain(struct macdrv_client_surface *surface)
 {
@@ -1264,7 +1296,8 @@ void macdrv_DestroyWindow(HWND hwnd)
     if (!(data = get_win_data(hwnd))) return;
 
     if (data->drag_event) NtSetEvent(data->drag_event, NULL);
-
+    data->pear_metal_generation = pear_metal_next_epoch();
+    pear_macdrv_metal_changed((UINT_PTR)data->hwnd,data->pear_metal_generation);
     destroy_cocoa_window(data);
 
     CFDictionaryRemoveValue(win_datas, hwnd);

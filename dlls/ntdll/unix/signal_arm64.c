@@ -25,8 +25,12 @@
 #ifdef __aarch64__
 
 #include "config.h"
+#include <errno.h>
 
 #include <assert.h>
+#ifdef __APPLE__
+# include <dlfcn.h>
+#endif
 #include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -63,6 +67,22 @@ WINE_DEFAULT_DEBUG_CHANNEL(seh);
 
 #define NTDLL_DWARF_H_NO_UNWINDER
 #include "dwarf.h"
+
+#ifdef __APPLE__
+/* Original Pear Darwin ABI integration. The mode APIs are resolved before any
+ * PE entry. Only these pre-resolved APIs may be called with foreign x18 active.
+ * A mode mismatch traps in assembly instead of calling a host error routine. */
+unsigned char (*pear_x18_getter)(void);
+void (*pear_x18_setter)(unsigned char);
+
+#define PEAR_ENTER_HOST "bl " __ASM_NAME("pear_x18_enter_host") "\n\t"
+#define PEAR_ENTER_GUEST "bl " __ASM_NAME("pear_x18_enter_guest") "\n\t"
+#define PEAR_SIGNAL_HANDLER __attribute__((used))
+#else
+#define PEAR_ENTER_HOST ""
+#define PEAR_ENTER_GUEST ""
+#define PEAR_SIGNAL_HANDLER
+#endif
 
 struct arm64_thread_data
 {
@@ -441,6 +461,7 @@ NTSTATUS WINAPI NtSetContextThread( HANDLE handle, const CONTEXT *context )
         frame->sp    = context->Sp;
         frame->pc    = context->Pc;
         frame->cpsr  = context->Cpsr;
+        TRACE_(seh)("Pear continue pc=%p flags=%08x emulated=%u\n", (void *)frame->pc, context->ContextFlags, is_emulated_code(frame->pc));
         if (is_emulated_code( frame->pc )) flags |= RESTORE_FLAGS_EMULATION;
         else frame->restore_flags &= ~RESTORE_FLAGS_EMULATION;
     }
@@ -772,7 +793,7 @@ NTSTATUS get_thread_wow64_context( HANDLE handle, void *ctx, ULONG size )
 static void setup_raise_exception( struct thread_data *data, ucontext_t *sigcontext,
                                    EXCEPTION_RECORD *rec, CONTEXT *context )
 {
-    CHPE_V2_CPU_AREA_INFO *chpe = data->teb->ChpeV2CpuAreaInfo;
+    CHPE_V2_CPU_AREA_INFO *chpe = data->teb ? data->teb->ChpeV2CpuAreaInfo : NULL;
     struct exc_stack_layout *stack;
     void *stack_ptr = (void *)(SP_sig(sigcontext) & ~15);
 
@@ -872,6 +893,198 @@ NTSTATUS call_user_exception_dispatcher( struct thread_data *data, EXCEPTION_REC
 }
 
 
+#ifdef __APPLE__
+/* 0x2c0-byte spill area is below the live Wine syscall frame. Preserve
+ * x0-x17, x19, LR, NZCV, FPCR/FPSR and q0-q31 across the Apple API calls.
+ * x18 is neither read nor written here; its guest value lives in Wine's frame.
+ * The caller must enable foreign mode before restoring that saved value. */
+__ASM_GLOBAL_FUNC( pear_x18_enter_host,
+                   "sub sp, sp, #0x2c0\n\t"
+                   __ASM_CFI(".cfi_def_cfa_offset 0x2c0\n\t")
+                   "stp x0, x1, [sp, #0x0]\n\t"
+                   "stp x2, x3, [sp, #0x10]\n\t"
+                   "stp x4, x5, [sp, #0x20]\n\t"
+                   "stp x6, x7, [sp, #0x30]\n\t"
+                   "stp x8, x9, [sp, #0x40]\n\t"
+                   "stp x10, x11, [sp, #0x50]\n\t"
+                   "stp x12, x13, [sp, #0x60]\n\t"
+                   "stp x14, x15, [sp, #0x70]\n\t"
+                   "stp x16, x17, [sp, #0x80]\n\t"
+                   "stp x19, x30, [sp, #0x90]\n\t"
+                   __ASM_CFI(".cfi_offset 19, -0x230\n\t")
+                   __ASM_CFI(".cfi_offset 30, -0x228\n\t")
+                   "mrs x16, NZCV\n\t"
+                   "mrs x17, FPCR\n\t"
+                   "stp x16, x17, [sp, #0xa0]\n\t"
+                   "mrs x16, FPSR\n\t"
+                   "str x16, [sp, #0xb0]\n\t"
+                   "stp q0, q1, [sp, #0xc0]\n\t"
+                   "stp q2, q3, [sp, #0xe0]\n\t"
+                   "stp q4, q5, [sp, #0x100]\n\t"
+                   "stp q6, q7, [sp, #0x120]\n\t"
+                   "stp q8, q9, [sp, #0x140]\n\t"
+                   "stp q10, q11, [sp, #0x160]\n\t"
+                   "stp q12, q13, [sp, #0x180]\n\t"
+                   "stp q14, q15, [sp, #0x1a0]\n\t"
+                   "stp q16, q17, [sp, #0x1c0]\n\t"
+                   "stp q18, q19, [sp, #0x1e0]\n\t"
+                   "stp q20, q21, [sp, #0x200]\n\t"
+                   "stp q22, q23, [sp, #0x220]\n\t"
+                   "stp q24, q25, [sp, #0x240]\n\t"
+                   "stp q26, q27, [sp, #0x260]\n\t"
+                   "stp q28, q29, [sp, #0x280]\n\t"
+                   "stp q30, q31, [sp, #0x2a0]\n\t"
+                   "mov w19, #0\n\t"
+                   "adrp x16, _pear_x18_getter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_getter@PAGEOFF]\n\t"
+                   "cbz x16, 9f\n\t"
+                   "blr x16\n\t"
+                   "and w0, w0, #1\n\t"
+                   "cmp w0, w19\n\t"
+                   "b.eq 9f\n\t"
+                   "adrp x16, _pear_x18_setter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_setter@PAGEOFF]\n\t"
+                   "cbz x16, 9f\n\t"
+                   "mov w0, w19\n\t"
+                   "blr x16\n\t"
+                   "adrp x16, _pear_x18_getter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_getter@PAGEOFF]\n\t"
+                   "blr x16\n\t"
+                   "and w0, w0, #1\n\t"
+                   "cmp w0, w19\n\t"
+                   "b.ne 9f\n\t"
+                   "ldp q0, q1, [sp, #0xc0]\n\t"
+                   "ldp q2, q3, [sp, #0xe0]\n\t"
+                   "ldp q4, q5, [sp, #0x100]\n\t"
+                   "ldp q6, q7, [sp, #0x120]\n\t"
+                   "ldp q8, q9, [sp, #0x140]\n\t"
+                   "ldp q10, q11, [sp, #0x160]\n\t"
+                   "ldp q12, q13, [sp, #0x180]\n\t"
+                   "ldp q14, q15, [sp, #0x1a0]\n\t"
+                   "ldp q16, q17, [sp, #0x1c0]\n\t"
+                   "ldp q18, q19, [sp, #0x1e0]\n\t"
+                   "ldp q20, q21, [sp, #0x200]\n\t"
+                   "ldp q22, q23, [sp, #0x220]\n\t"
+                   "ldp q24, q25, [sp, #0x240]\n\t"
+                   "ldp q26, q27, [sp, #0x260]\n\t"
+                   "ldp q28, q29, [sp, #0x280]\n\t"
+                   "ldp q30, q31, [sp, #0x2a0]\n\t"
+                   "ldp x16, x17, [sp, #0xa0]\n\t"
+                   "msr NZCV, x16\n\t"
+                   "msr FPCR, x17\n\t"
+                   "ldr x16, [sp, #0xb0]\n\t"
+                   "msr FPSR, x16\n\t"
+                   "ldp x19, x30, [sp, #0x90]\n\t"
+                   "ldp x0, x1, [sp, #0x0]\n\t"
+                   "ldp x2, x3, [sp, #0x10]\n\t"
+                   "ldp x4, x5, [sp, #0x20]\n\t"
+                   "ldp x6, x7, [sp, #0x30]\n\t"
+                   "ldp x8, x9, [sp, #0x40]\n\t"
+                   "ldp x10, x11, [sp, #0x50]\n\t"
+                   "ldp x12, x13, [sp, #0x60]\n\t"
+                   "ldp x14, x15, [sp, #0x70]\n\t"
+                   "ldp x16, x17, [sp, #0x80]\n\t"
+                   "add sp, sp, #0x2c0\n\t"
+                   __ASM_CFI(".cfi_def_cfa_offset 0\n\t")
+                   __ASM_CFI(".cfi_same_value 19\n\t")
+                   __ASM_CFI(".cfi_same_value 30\n\t")
+                   "ret\n\t"
+                   "9: brk #0x504\n\t" )
+
+__ASM_GLOBAL_FUNC( pear_x18_enter_guest,
+                   "sub sp, sp, #0x2c0\n\t"
+                   __ASM_CFI(".cfi_def_cfa_offset 0x2c0\n\t")
+                   "stp x0, x1, [sp, #0x0]\n\t"
+                   "stp x2, x3, [sp, #0x10]\n\t"
+                   "stp x4, x5, [sp, #0x20]\n\t"
+                   "stp x6, x7, [sp, #0x30]\n\t"
+                   "stp x8, x9, [sp, #0x40]\n\t"
+                   "stp x10, x11, [sp, #0x50]\n\t"
+                   "stp x12, x13, [sp, #0x60]\n\t"
+                   "stp x14, x15, [sp, #0x70]\n\t"
+                   "stp x16, x17, [sp, #0x80]\n\t"
+                   "stp x19, x30, [sp, #0x90]\n\t"
+                   __ASM_CFI(".cfi_offset 19, -0x230\n\t")
+                   __ASM_CFI(".cfi_offset 30, -0x228\n\t")
+                   "mrs x16, NZCV\n\t"
+                   "mrs x17, FPCR\n\t"
+                   "stp x16, x17, [sp, #0xa0]\n\t"
+                   "mrs x16, FPSR\n\t"
+                   "str x16, [sp, #0xb0]\n\t"
+                   "stp q0, q1, [sp, #0xc0]\n\t"
+                   "stp q2, q3, [sp, #0xe0]\n\t"
+                   "stp q4, q5, [sp, #0x100]\n\t"
+                   "stp q6, q7, [sp, #0x120]\n\t"
+                   "stp q8, q9, [sp, #0x140]\n\t"
+                   "stp q10, q11, [sp, #0x160]\n\t"
+                   "stp q12, q13, [sp, #0x180]\n\t"
+                   "stp q14, q15, [sp, #0x1a0]\n\t"
+                   "stp q16, q17, [sp, #0x1c0]\n\t"
+                   "stp q18, q19, [sp, #0x1e0]\n\t"
+                   "stp q20, q21, [sp, #0x200]\n\t"
+                   "stp q22, q23, [sp, #0x220]\n\t"
+                   "stp q24, q25, [sp, #0x240]\n\t"
+                   "stp q26, q27, [sp, #0x260]\n\t"
+                   "stp q28, q29, [sp, #0x280]\n\t"
+                   "stp q30, q31, [sp, #0x2a0]\n\t"
+                   "mov w19, #1\n\t"
+                   "adrp x16, _pear_x18_getter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_getter@PAGEOFF]\n\t"
+                   "cbz x16, 9f\n\t"
+                   "blr x16\n\t"
+                   "and w0, w0, #1\n\t"
+                   "cmp w0, w19\n\t"
+                   "b.eq 9f\n\t"
+                   "adrp x16, _pear_x18_setter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_setter@PAGEOFF]\n\t"
+                   "cbz x16, 9f\n\t"
+                   "mov w0, w19\n\t"
+                   "blr x16\n\t"
+                   "adrp x16, _pear_x18_getter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_getter@PAGEOFF]\n\t"
+                   "blr x16\n\t"
+                   "and w0, w0, #1\n\t"
+                   "cmp w0, w19\n\t"
+                   "b.ne 9f\n\t"
+                   "ldp q0, q1, [sp, #0xc0]\n\t"
+                   "ldp q2, q3, [sp, #0xe0]\n\t"
+                   "ldp q4, q5, [sp, #0x100]\n\t"
+                   "ldp q6, q7, [sp, #0x120]\n\t"
+                   "ldp q8, q9, [sp, #0x140]\n\t"
+                   "ldp q10, q11, [sp, #0x160]\n\t"
+                   "ldp q12, q13, [sp, #0x180]\n\t"
+                   "ldp q14, q15, [sp, #0x1a0]\n\t"
+                   "ldp q16, q17, [sp, #0x1c0]\n\t"
+                   "ldp q18, q19, [sp, #0x1e0]\n\t"
+                   "ldp q20, q21, [sp, #0x200]\n\t"
+                   "ldp q22, q23, [sp, #0x220]\n\t"
+                   "ldp q24, q25, [sp, #0x240]\n\t"
+                   "ldp q26, q27, [sp, #0x260]\n\t"
+                   "ldp q28, q29, [sp, #0x280]\n\t"
+                   "ldp q30, q31, [sp, #0x2a0]\n\t"
+                   "ldp x16, x17, [sp, #0xa0]\n\t"
+                   "msr NZCV, x16\n\t"
+                   "msr FPCR, x17\n\t"
+                   "ldr x16, [sp, #0xb0]\n\t"
+                   "msr FPSR, x16\n\t"
+                   "ldp x19, x30, [sp, #0x90]\n\t"
+                   "ldp x0, x1, [sp, #0x0]\n\t"
+                   "ldp x2, x3, [sp, #0x10]\n\t"
+                   "ldp x4, x5, [sp, #0x20]\n\t"
+                   "ldp x6, x7, [sp, #0x30]\n\t"
+                   "ldp x8, x9, [sp, #0x40]\n\t"
+                   "ldp x10, x11, [sp, #0x50]\n\t"
+                   "ldp x12, x13, [sp, #0x60]\n\t"
+                   "ldp x14, x15, [sp, #0x70]\n\t"
+                   "ldp x16, x17, [sp, #0x80]\n\t"
+                   "add sp, sp, #0x2c0\n\t"
+                   __ASM_CFI(".cfi_def_cfa_offset 0\n\t")
+                   __ASM_CFI(".cfi_same_value 19\n\t")
+                   __ASM_CFI(".cfi_same_value 30\n\t")
+                   "ret\n\t"
+                   "9: brk #0x504\n\t" )
+#endif
+
 /***********************************************************************
  *           call_user_mode_callback
  */
@@ -904,6 +1117,36 @@ __ASM_GLOBAL_FUNC( call_user_mode_callback,
                    "stp d12, d13, [x29, #0x80]\n\t"
                    "stp d14, d15, [x29, #0x90]\n\t"
                    "stp x1, x2, [x29, #0xa0]\n\t" /* ret_ptr, ret_len */
+#ifdef __APPLE__
+                   "mov x19, x4\n\t"             /* teb; x18 is host-reserved */
+                   "mov x20, x0\n\t"             /* user_sp */
+                   "mov x21, x3\n\t"             /* func */
+                   "mrs x1, fpcr\n\t"
+                   "mrs x2, fpsr\n\t"
+                   "bfi x1, x2, #0, #32\n\t"
+                   "ldr x2, [x19]\n\t"
+                   "stp x1, x2, [x29, #0xb0]\n\t"
+                   "ldr x7, [x19, #0x378]\n\t"
+                   "sub x22, sp, #0x330\n\t"
+                   "str x22, [x19, #0x378]\n\t"
+                   "add x8, x29, #0xd0\n\t"
+                   "stp x7, x8, [x22, #0x110]\n\t"
+                   /* Reserve the nested frame before the mode helper spills. */
+                   "mov sp, x22\n\t"
+                   "ldr w11, [x19, #0x380]\n\t"
+                   "cbz w11, 1f\n\t"
+                   "ldr x1, [x20]\n\t"
+                   "ldp w2, w0, [x20, #8]\n\t"
+                   "str x0, [x29, #0xc0]\n\t"
+                   "bl " __ASM_NAME("trace_usercall") "\n"
+                   "1:\t"
+                   PEAR_ENTER_GUEST
+                   "mov x18, x19\n\t"
+                   "mov x3, x21\n\t"              /* signal fixup's original target register */
+                   "mov sp, x20\n\t"
+                   __ASM_LOCAL_LABEL("call_user_mode_callback_user_stack") ":\n\t"
+                   "br x3"
+#else
                    "mov x18, x4\n\t"              /* teb */
                    "mrs x1, fpcr\n\t"
                    "mrs x2, fpsr\n\t"
@@ -933,7 +1176,9 @@ __ASM_GLOBAL_FUNC( call_user_mode_callback,
                    "mov x18, x19\n\t"             /* teb */
                    "mov x0, x20\n\t"              /* user_sp */
                    "mov x3, x21\n\t"
-                   "b 1b" )
+                   "b 1b"
+#endif
+                   )
 
 
 /***********************************************************************
@@ -1128,7 +1373,7 @@ static BOOL handle_syscall_fault( struct thread_data *data, ucontext_t *context,
  *
  * Handler for SIGSEGV and related errors.
  */
-static void segv_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER segv_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1178,7 +1423,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGILL.
  */
-static void ill_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER ill_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1210,7 +1455,7 @@ static void ill_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGTRAP.
  */
-static void trap_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER trap_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1277,7 +1522,7 @@ static void trap_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGFPE.
  */
-static void fpe_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER fpe_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1338,7 +1583,7 @@ static void fpe_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGINT.
  */
-static void int_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER int_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     HANDLE handle;
 
@@ -1354,7 +1599,7 @@ static void int_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGABRT.
  */
-static void abrt_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER abrt_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1373,7 +1618,7 @@ static void abrt_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGQUIT.
  */
-static void quit_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER quit_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1413,7 +1658,7 @@ static void save_syscall_entry_frame( ucontext_t *sigcontext )
  *
  * Handler for SIGUSR1, used to signal a thread that it got suspended.
  */
-static void usr1_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER usr1_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1488,7 +1733,7 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
  *
  * Handler for SIGUSR2, used to set a thread context.
  */
-static void usr2_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
+static void PEAR_SIGNAL_HANDLER usr2_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
 {
     ucontext_t *sigcontext = _sigcontext;
     struct thread_data *data = get_thread_data();
@@ -1498,6 +1743,16 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *_sigcontext )
     if (!is_inside_syscall( data, SP_sig(sigcontext) )) return;
     if (!frame) return;
 
+    /* write is async-signal-safe; do not add an allocating logger here. */
+    if (is_arm64ec())
+    {
+        static const char native[] = "Pear SIGUSR2 resume native\n";
+        static const char guest[] = "Pear SIGUSR2 resume guest\n";
+        int saved_errno = errno;
+        if (is_emulated_code(frame->pc)) write(2, guest, sizeof(guest)-1);
+        else write(2, native, sizeof(native)-1);
+        errno = saved_errno;
+    }
     if (is_emulated_code( frame->pc ))
     {
         CONTEXT *user_context = (CONTEXT *)((frame->sp - sizeof(CONTEXT)) & ~15);
@@ -1562,6 +1817,169 @@ void signal_free_thread( TEB *teb )
 }
 
 
+#ifdef __APPLE__
+/* Signal delivery can interrupt a guest window, and Wine's SIGUSR2 slowpath
+ * can return directly from a host signal to guest code. This is the minimum
+ * ABI gateway prerequisite; it does not qualify arbitrary signal contexts.
+ * Keep the actual Wine handlers and their context construction unchanged. */
+struct pear_signal_result { ULONG64 foreign_mode, guest_x18; };
+extern void pear_stage4_signal_before(int, unsigned, unsigned, ucontext_t *);
+extern void pear_stage4_signal_after(int, unsigned, ucontext_t *);
+
+struct pear_signal_result pear_signal_dispatch( void (*handler)(int, siginfo_t *, void *),
+                                                int sig, siginfo_t *info, ucontext_t *context,
+                                                unsigned int entry_mode )
+{
+    ULONG_PTR original_pc = PC_sig(context), pc;
+    struct thread_data *data;
+    struct syscall_frame *frame;
+    struct pear_signal_result result;
+    extern const ULONG_PTR __wine_syscall_dispatcher_kernel_stack_ptr;
+    extern const ULONG_PTR __wine_unix_call_dispatcher_kernel_stack_ptr;
+
+    if (!pear_x18_getter || pear_x18_getter()) _exit(126);
+    pear_stage4_signal_before(sig, entry_mode, 0, context);
+    handler( sig, info, context );
+    pc = PC_sig(context);
+    result.foreign_mode = entry_mode;
+    if (pc != original_pc)
+    {
+        data = get_thread_data();
+        frame = data ? get_syscall_frame( data ) : NULL;
+        if (pc == (ULONG_PTR)longjmp || pc == (ULONG_PTR)__wine_syscall_dispatcher_return)
+            result.foreign_mode = 0;
+        else if (pc == (ULONG_PTR)pKiUserExceptionDispatcher || pc == (ULONG_PTR)pKiUserApcDispatcher ||
+                 pc == (ULONG_PTR)pKiUserEmulationDispatcher || (frame && pc == frame->pc) ||
+                 pc == __wine_syscall_dispatcher_kernel_stack_ptr ||
+                 pc == __wine_unix_call_dispatcher_kernel_stack_ptr)
+            result.foreign_mode = 1;
+        else if (!entry_mode)
+            _exit(126);  /* Do not guess a new host-to-guest continuation. */
+    }
+    result.guest_x18 = REGn_sig(18, context);
+    pear_stage4_signal_after(sig, result.foreign_mode, context);
+    return result;
+}
+
+__ASM_GLOBAL_FUNC( pear_signal_gateway,
+                   "stp x29, x30, [sp, #-0x60]!\n\t"
+                   __ASM_CFI(".cfi_def_cfa_offset 0x60\n\t")
+                   __ASM_CFI(".cfi_offset 29, -0x60\n\t")
+                   __ASM_CFI(".cfi_offset 30, -0x58\n\t")
+                   "mov x29, sp\n\t"
+                   __ASM_CFI(".cfi_def_cfa_register 29\n\t")
+                   "stp x19, x20, [sp, #0x10]\n\t"
+                   __ASM_CFI(".cfi_offset 19, -80\n\t")
+                   __ASM_CFI(".cfi_offset 20, -72\n\t")
+                   "stp x21, x22, [sp, #0x20]\n\t"
+                   __ASM_CFI(".cfi_offset 21, -64\n\t")
+                   __ASM_CFI(".cfi_offset 22, -56\n\t")
+                   "stp x23, x24, [sp, #0x30]\n\t"
+                   __ASM_CFI(".cfi_offset 23, -48\n\t")
+                   __ASM_CFI(".cfi_offset 24, -40\n\t")
+                   "stp x25, x26, [sp, #0x40]\n\t"
+                   __ASM_CFI(".cfi_offset 25, -32\n\t")
+                   __ASM_CFI(".cfi_offset 26, -24\n\t")
+                   "mov x19, x0\n\t"
+                   "mov x20, x1\n\t"
+                   "mov x21, x2\n\t"
+                   "mov x23, x16\n\t"
+                   "adrp x16, _pear_x18_getter@PAGE\n\t"
+                   "ldr x16, [x16, _pear_x18_getter@PAGEOFF]\n\t"
+                   "cbz x16, 9f\n\t"
+                   "blr x16\n\t"
+                   "and w25, w0, #1\n\t"
+                   "cbz w25, 1f\n\t"
+                   "mov x22, x18\n\t"
+                   "bl _pear_x18_enter_host\n\t"
+                   "1: mov x0, x23\n\t"
+                   "mov w1, w19\n\t"
+                   "mov x2, x20\n\t"
+                   "mov x3, x21\n\t"
+                   "mov w4, w25\n\t"
+                   "bl _pear_signal_dispatch\n\t"
+                   "mov x24, x1\n\t"
+                   "cbz x0, 2f\n\t"
+                   "bl _pear_x18_enter_guest\n\t"
+                   "mov x18, x24\n\t"
+                   "2: ldp x19, x20, [sp, #0x10]\n\t"
+                   "ldp x21, x22, [sp, #0x20]\n\t"
+                   "ldp x23, x24, [sp, #0x30]\n\t"
+                   "ldp x25, x26, [sp, #0x40]\n\t"
+                   "ldp x29, x30, [sp], #0x60\n\t"
+                   __ASM_CFI(".cfi_def_cfa sp, 0\n\t")
+                   __ASM_CFI(".cfi_same_value 19\n\t")
+                   __ASM_CFI(".cfi_same_value 20\n\t")
+                   __ASM_CFI(".cfi_same_value 21\n\t")
+                   __ASM_CFI(".cfi_same_value 22\n\t")
+                   __ASM_CFI(".cfi_same_value 23\n\t")
+                   __ASM_CFI(".cfi_same_value 24\n\t")
+                   __ASM_CFI(".cfi_same_value 25\n\t")
+                   __ASM_CFI(".cfi_same_value 26\n\t")
+                   __ASM_CFI(".cfi_same_value 29\n\t")
+                   __ASM_CFI(".cfi_same_value 30\n\t")
+                   "ret\n\t"
+                   "9: brk #0x505\n\t" )
+
+extern void pear_signal_int( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_int,
+                   "adrp x16, _int_handler@PAGE\n\t"
+                   "add x16, x16, _int_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_fpe( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_fpe,
+                   "adrp x16, _fpe_handler@PAGE\n\t"
+                   "add x16, x16, _fpe_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_abrt( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_abrt,
+                   "adrp x16, _abrt_handler@PAGE\n\t"
+                   "add x16, x16, _abrt_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_quit( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_quit,
+                   "adrp x16, _quit_handler@PAGE\n\t"
+                   "add x16, x16, _quit_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_usr1( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_usr1,
+                   "adrp x16, _usr1_handler@PAGE\n\t"
+                   "add x16, x16, _usr1_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_usr2( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_usr2,
+                   "adrp x16, _usr2_handler@PAGE\n\t"
+                   "add x16, x16, _usr2_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_trap( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_trap,
+                   "adrp x16, _trap_handler@PAGE\n\t"
+                   "add x16, x16, _trap_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_segv( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_segv,
+                   "adrp x16, _segv_handler@PAGE\n\t"
+                   "add x16, x16, _segv_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+extern void pear_signal_ill( int, siginfo_t *, void * );
+__ASM_GLOBAL_FUNC( pear_signal_ill,
+                   "adrp x16, _ill_handler@PAGE\n\t"
+                   "add x16, x16, _ill_handler@PAGEOFF\n\t"
+                   "b _pear_signal_gateway\n\t" )
+
+#define PEAR_SIGNAL_ENTRY(name) pear_signal_##name
+#else
+#define PEAR_SIGNAL_ENTRY(name) name##_handler
+#endif
+
 /**********************************************************************
  *		signal_init_process
  */
@@ -1569,30 +1987,40 @@ void signal_init_process( TEB *teb )
 {
     struct sigaction sig_act;
 
+#ifdef __APPLE__
+    pear_x18_getter = dlsym( RTLD_DEFAULT, "os_custom_x18_abi_enabled" );
+    pear_x18_setter = dlsym( RTLD_DEFAULT, "os_set_custom_x18_abi_enabled" );
+    if (!pear_x18_getter || !pear_x18_setter || pear_x18_getter())
+    {
+        fprintf( stderr, "wine: Darwin x18 ABI mode is unavailable or not initially in host mode.\n" );
+        exit(1);
+    }
+#endif
+
     alloc_syscall_frame( sizeof(struct syscall_frame) );
     signal_alloc_thread( teb );
 
     sig_act.sa_mask = server_block_set;
     sig_act.sa_flags = SA_SIGINFO | SA_RESTART | SA_ONSTACK;
 
-    sig_act.sa_sigaction = int_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(int);
     if (sigaction( SIGINT, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = fpe_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(fpe);
     if (sigaction( SIGFPE, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = abrt_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(abrt);
     if (sigaction( SIGABRT, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = quit_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(quit);
     if (sigaction( SIGQUIT, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = usr1_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(usr1);
     if (sigaction( SIGUSR1, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = usr2_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(usr2);
     if (sigaction( SIGUSR2, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = trap_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(trap);
     if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = segv_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(segv);
     if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
     if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
-    sig_act.sa_sigaction = ill_handler;
+    sig_act.sa_sigaction = PEAR_SIGNAL_ENTRY(ill);
     if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
     return;
 
@@ -1770,11 +2198,17 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    __ASM_CFI(".cfi_offset 27, -0x70\n\t")
                    __ASM_CFI(".cfi_offset 28, -0x68\n\t")
                    __ASM_LOCAL_LABEL("__wine_syscall_dispatcher_kernel_stack") ":\n\t"
+                   PEAR_ENTER_HOST
                    "mov x22, sp\n\t"
                    __ASM_CFI_CFA_IS_AT2(x22, 0x98, 0x02) /* frame->syscall_cfa */
                    "and x20, x8, #0xfff\n\t"    /* syscall number */
                    "ubfx x21, x8, #12, #2\n\t"  /* syscall table number */
+#ifdef __APPLE__
+                   "ldr x16, [x22, #0x90]\n\t"  /* saved guest TEB */
+                   "ldr x16, [x16, #0x370]\n\t"
+#else
                    "ldr x16, [x18, #0x370]\n\t" /* thread_data->syscall_table */
+#endif
                    "add x21, x16, x21, lsl #5\n\t"
                    "ldr x16, [x21, #16]\n\t"    /* table->ServiceLimit */
                    "cmp x20, x16\n\t"
@@ -1792,7 +2226,12 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "cbnz x9, 1b\n"
                    "2:\tldr x16, [x21]\n\t"     /* table->ServiceTable */
                    "ldr x23, [x16, x20, lsl 3]\n\t"
+#ifdef __APPLE__
+                   "ldr x11, [x22, #0x90]\n\t"
+                   "ldr w11, [x11, #0x380]\n\t"
+#else
                    "ldr w11, [x18, #0x380]\n\t" /* thread_data->syscall_trace */
+#endif
                    "cbnz x11, " __ASM_LOCAL_LABEL("trace_syscall") "\n\t"
                    "blr x23\n\t"
                    "mov sp, x22\n"
@@ -1816,7 +2255,9 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "ldp x10, x11, [sp, #0x50]\n\t"
                    "ldp x12, x13, [sp, #0x60]\n\t"
                    "ldp x14, x15, [sp, #0x70]\n"
-                   "2:\tldp x18, x19, [sp, #0x90]\n\t"
+                   "2:\t"
+                   PEAR_ENTER_GUEST
+                   "ldp x18, x19, [sp, #0x90]\n\t"
                    "ldp x20, x21, [sp, #0xa0]\n\t"
                    "ldp x22, x23, [sp, #0xb0]\n\t"
                    "ldp x24, x25, [sp, #0xc0]\n\t"
@@ -1882,7 +2323,12 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "b " __ASM_LOCAL_LABEL("__wine_syscall_dispatcher_return") )
 
 __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher_return,
+#ifdef __APPLE__
+                   "ldr x11, [sp, #0x90]\n\t"
+                   "ldr w11, [x11, #0x380]\n\t"
+#else
                    "ldr w11, [x18, #0x380]\n\t" /* thread_data->syscall_trace */
+#endif
                    "cbnz x11, " __ASM_LOCAL_LABEL("trace_syscall_ret") "\n\t"
                    "b " __ASM_LOCAL_LABEL("__wine_syscall_dispatcher_return") )
 
@@ -1924,6 +2370,7 @@ __ASM_GLOBAL_FUNC( __wine_unix_call_dispatcher,
                    __ASM_CFI(".cfi_offset 27, -0x70\n\t")
                    __ASM_CFI(".cfi_offset 28, -0x68\n\t")
                    __ASM_LOCAL_LABEL("__wine_unix_call_dispatcher_kernel_stack") ":\n\t"
+                   PEAR_ENTER_HOST
                    "mov x19, sp\n\t"
                    __ASM_CFI_CFA_IS_AT2(x19, 0x98, 0x02) /* frame->syscall_cfa */
                    "ldr x16, [x0, x1, lsl 3]\n\t"
@@ -1932,6 +2379,7 @@ __ASM_GLOBAL_FUNC( __wine_unix_call_dispatcher,
                    "ldr w16, [sp, #0x10c]\n\t"  /* frame->restore_flags */
                    "cbnz w16, " __ASM_LOCAL_LABEL("__wine_syscall_dispatcher_return") "\n\t"
                    __ASM_CFI_CFA_IS_AT2(sp, 0x98, 0x02) /* frame->syscall_cfa */
+                   PEAR_ENTER_GUEST
                    "ldp x18, x19, [sp, #0x90]\n\t"
                    "ldp x16, x17, [sp, #0xf8]\n\t"
                    /* switch to user stack */

@@ -24,6 +24,7 @@
 #endif
 
 #include "config.h"
+#include "wine/pear_stage3.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -415,9 +416,9 @@ static NTSTATUS spawn_process( const RTL_USER_PROCESS_PARAMETERS *params, int so
         isatty(1) && is_unix_console_handle( params->hStdOutput ))
         stdout_fd = 1;
 
-    if (!(pid = fork()))  /* child */
+    if (!(pid = pear_stage3_fork()))  /* child */
     {
-        if (!(pid = fork()))  /* grandchild */
+        if (!(pid = pear_stage3_fork()))  /* grandchild */
         {
             if ((peb && peb->ProcessParameters &&
                  params->ProcessGroupId != peb->ProcessParameters->ProcessGroupId) ||
@@ -425,7 +426,7 @@ static NTSTATUS spawn_process( const RTL_USER_PROCESS_PARAMETERS *params, int so
                 params->ConsoleHandle == CONSOLE_HANDLE_ALLOC_NO_WINDOW ||
                 params->ConsoleHandle == NULL)
             {
-                setsid();
+                pear_stage3_setsid();
                 set_stdio_fd( -1, -1 );  /* close stdin and stdout */
             }
             else set_stdio_fd( stdin_fd, stdout_fd );
@@ -472,6 +473,9 @@ NTSTATUS WINAPI __wine_unix_spawnvp( char * const argv[], int wait )
     pid_t pid, wret;
     int fd[2], status, err;
 
+    if (pear_stage3_enabled())
+        pear_bootstrap_failure( "loader", "unobserved_native_spawn", ENOTSUP );
+
 #ifdef HAVE_PIPE2
     if (pipe2( fd, O_CLOEXEC ) == -1)
 #endif
@@ -481,14 +485,14 @@ NTSTATUS WINAPI __wine_unix_spawnvp( char * const argv[], int wait )
         fcntl( fd[1], F_SETFD, FD_CLOEXEC );
     }
 
-    if (!(pid = fork()))
+    if (!(pid = pear_stage3_fork()))
     {
         /* in child */
         close( fd[0] );
         signal( SIGPIPE, SIG_DFL );
         if (!wait)
         {
-            if (!(pid = fork())) execvp( argv[0], argv ); /* in grandchild */
+            if (!(pid = pear_stage3_fork())) execvp( argv[0], argv ); /* in grandchild */
             if (pid > 0) _exit(0); /* exit child if fork succeeded */
         }
         else execvp( argv[0], argv );
@@ -568,6 +572,9 @@ static NTSTATUS fork_and_exec( OBJECT_ATTRIBUTES *attr, const char *unix_name, i
     char **argv;
     NTSTATUS status = STATUS_SUCCESS;
 
+    if (pear_stage3_enabled())
+        pear_bootstrap_failure( "loader", "unobserved_native_exec", ENOTSUP );
+
 #ifdef HAVE_PIPE2
     if (pipe2( fd, O_CLOEXEC ) == -1)
 #endif
@@ -585,9 +592,9 @@ static NTSTATUS fork_and_exec( OBJECT_ATTRIBUTES *attr, const char *unix_name, i
         isatty(1) && is_unix_console_handle( params->hStdOutput ))
         stdout_fd = 1;
 
-    if (!(pid = fork()))  /* child */
+    if (!(pid = pear_stage3_fork()))  /* child */
     {
-        if (!(pid = fork()))  /* grandchild */
+        if (!(pid = pear_stage3_fork()))  /* grandchild */
         {
             close( fd[0] );
 
@@ -597,7 +604,7 @@ static NTSTATUS fork_and_exec( OBJECT_ATTRIBUTES *attr, const char *unix_name, i
                 params->ConsoleHandle == CONSOLE_HANDLE_ALLOC_NO_WINDOW ||
                 params->ConsoleHandle == NULL)
             {
-                setsid();
+                pear_stage3_setsid();
                 set_stdio_fd( -1, -1 );  /* close stdin and stdout */
             }
             else set_stdio_fd( stdin_fd, stdout_fd );
@@ -978,6 +985,13 @@ NTSTATUS WINAPI NtTerminateProcess( HANDLE handle, LONG exit_code )
     SERVER_END_REQ;
     if (self)
     {
+        if (pear_stage3_enabled())
+        {
+            char detail[80];
+            snprintf( detail, sizeof(detail), ",\"exit_code\":%ld", (long)exit_code );
+            pear_bootstrap_event( "loader", !handle ? "stage3_guest_exit" : "stage3_process_exit", detail );
+            if (!handle) pear_bootstrap_images( "loader" );
+        }
         if (!handle) process_exiting = TRUE;
         else if (process_exiting) exit_process( exit_code );
         else abort_process( exit_code );

@@ -28,6 +28,12 @@ SOURCES = \
 	cocoa_window.m \
 	display.c \
 	dllmain.c \
+	pear_metal_bridge.m \
+	pear_metal_pairing.m \
+	pear_metal_control.c \
+	pear_window_control.c \
+	pear_window_fixture.m \
+	winemac.drv.spec \
 	event.c \
 	gdi.c \
 	image.c \

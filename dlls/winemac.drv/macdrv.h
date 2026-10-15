@@ -229,6 +229,7 @@ struct macdrv_win_data
     WineContentView    *client_view;
     struct window_rects rects;                  /* window rects in monitor DPI, relative to parent client area */
     int                 pixel_format;           /* pixel format for GL */
+    UINT64              pear_metal_generation;   /* private source lifetime epoch */
     HANDLE              drag_event;             /* event to signal that Cocoa-driven window dragging has ended */
     unsigned int        on_screen : 1;          /* is window ordered in? (minimized or not) */
     unsigned int        shaped : 1;             /* is window using a custom region shape? */
@@ -387,5 +388,11 @@ static inline UINT asciiz_to_unicode(WCHAR *dst, const char *src)
     return (p - dst) * sizeof(WCHAR);
 }
 
+extern int32_t pear_macdrv_metal_snapshot(uint64_t hwnd,uint64_t *generation,WineContentView **view);
+extern void pear_macdrv_metal_changed(uint64_t hwnd,uint64_t generation);
+extern void pear_macdrv_metal_counts(uint64_t *leases,uint64_t *attachments);
+extern int32_t macdrv_pear_metal_open(WineContentView *view,MTLDevice_id device,WineMetalView **metal,CAMetalLayer **layer);
+extern void macdrv_pear_metal_close(WineContentView *view,WineMetalView *metal);
+extern void macdrv_pear_metal_retain_view(WineContentView *view);
 #undef BOOL
 #endif  /* __WINE_MACDRV_H */

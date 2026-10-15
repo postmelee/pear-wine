@@ -23,6 +23,8 @@ enum macdrv_funcs
 {
     unix_init,
     unix_quit_result,
+    unix_pear_stage5,
+    unix_pear_metal_pairing,
     unix_funcs_count
 };
 

@@ -47,6 +47,14 @@ WINE_DECLARE_DEBUG_CHANNEL(imports);
 #define DEFAULT_SECURITY_COOKIE_64  (((ULONGLONG)0x00002b99 << 32) | 0x2ddfa232)
 #endif
 #define DEFAULT_SECURITY_COOKIE_32  0xbb40e64e
+
+/* Pear publishes native PE code before entry; guest-created executable stubs
+ * have no supported publication or retirement owner in this configuration. */
+#if defined(PEAR_NATIVE_PE_PUBLICATION) && defined(__aarch64__) && !defined(__arm64ec__)
+#define PEAR_NATIVE_PE_LOADER 1
+#else
+#define PEAR_NATIVE_PE_LOADER 0
+#endif
 #define DEFAULT_SECURITY_COOKIE_16  (DEFAULT_SECURITY_COOKIE_32 >> 16)
 
 #ifdef __i386__
@@ -1139,7 +1147,7 @@ void * WINAPI RtlFindExportedRoutineByName( HMODULE module, const char *name )
  * Import the dll specified by the given import descriptor.
  * The loader_section must be locked while calling this function.
  */
-static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, LPCWSTR load_path, WINE_MODREF **pwm )
+static NTSTATUS import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, LPCWSTR load_path, WINE_MODREF **pwm )
 {
     HMODULE module = wm->ldr.DllBase;
     BOOL system = wm->system || (wm->ldr.Flags & LDR_WINE_INTERNAL);
@@ -1156,6 +1164,9 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
     PVOID protect_base;
     SIZE_T protect_size = 0;
     DWORD protect_old;
+    NTSTATUS restore_status;
+
+    *pwm = NULL;
 
     thunk_list = get_rva( module, (DWORD)descr->FirstThunk );
     if (descr->OriginalFirstThunk)
@@ -1167,7 +1178,7 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
     {
         WARN( "Skipping unused import %s\n", name );
         *pwm = NULL;
-        return TRUE;
+        return STATUS_SUCCESS;
     }
 
     status = build_import_name( wm, buffer, name, len );
@@ -1181,22 +1192,32 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
         else
             ERR("Loading library %s (which is needed by %s) failed (error %lx).\n",
                 name, debugstr_w(wm->ldr.FullDllName.Buffer), status);
-        return FALSE;
+        return PEAR_NATIVE_PE_LOADER ? status : STATUS_DLL_NOT_FOUND;
     }
+
+    *pwm = wmImp;
 
     /* unprotect the import address table since it can be located in
      * readonly section */
     while (import_list[protect_size].u1.Ordinal) protect_size++;
     protect_base = thunk_list;
     protect_size *= sizeof(*thunk_list);
-    NtProtectVirtualMemory( NtCurrentProcess(), &protect_base,
-                            &protect_size, PAGE_READWRITE, &protect_old );
+    status = NtProtectVirtualMemory( NtCurrentProcess(), &protect_base,
+                                     &protect_size, PAGE_READWRITE, &protect_old );
+    if (PEAR_NATIVE_PE_LOADER && status) return status;
+    status = STATUS_SUCCESS;
 
     imp_mod = wmImp->ldr.DllBase;
     exports = RtlImageDirectoryEntryToData( imp_mod, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &exp_size );
 
     if (!exports)
     {
+        if (PEAR_NATIVE_PE_LOADER)
+        {
+            status = IMAGE_SNAP_BY_ORDINAL(import_list->u1.Ordinal) ?
+                     STATUS_ORDINAL_NOT_FOUND : STATUS_ENTRYPOINT_NOT_FOUND;
+            goto done;
+        }
         /* set all imported function to deadbeef */
         while (import_list->u1.Ordinal)
         {
@@ -1231,6 +1252,11 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
                                                                       ordinal - exports->Base, load_path, wm, FALSE );
             if (!thunk_list->u1.Function)
             {
+                if (PEAR_NATIVE_PE_LOADER)
+                {
+                    status = STATUS_ORDINAL_NOT_FOUND;
+                    goto done;
+                }
                 thunk_list->u1.Function = allocate_stub( name, IntToPtr(ordinal) );
                 WARN("No implementation for %s.%d imported from %s, setting to %p\n",
                      name, ordinal, debugstr_w(wm->ldr.FullDllName.Buffer),
@@ -1247,6 +1273,11 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
                                                                     pe_name->Hint, load_path, wm, FALSE );
             if (!thunk_list->u1.Function)
             {
+                if (PEAR_NATIVE_PE_LOADER)
+                {
+                    status = STATUS_ENTRYPOINT_NOT_FOUND;
+                    goto done;
+                }
                 thunk_list->u1.Function = allocate_stub( name, (const char*)pe_name->Name );
                 WARN("No implementation for %s.%s imported from %s, setting to %p\n",
                      name, pe_name->Name, debugstr_w(wm->ldr.FullDllName.Buffer),
@@ -1261,9 +1292,16 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
 
 done:
     /* restore old protection of the import address table */
-    NtProtectVirtualMemory( NtCurrentProcess(), &protect_base, &protect_size, protect_old, &protect_old );
-    *pwm = wmImp;
-    return TRUE;
+    restore_status = NtProtectVirtualMemory( NtCurrentProcess(), &protect_base, &protect_size,
+                                              protect_old, &protect_old );
+    if (PEAR_NATIVE_PE_LOADER && restore_status)
+    {
+        /* A recoverable load error must not leave writable IAT pages behind.
+         * The native owner likewise treats failed protection rollback as fatal. */
+        ERR( "Pear cannot restore import protection (load %lx, restore %lx)\n", status, restore_status );
+        for (;;) NtTerminateProcess( NtCurrentProcess(), status ? status : restore_status );
+    }
+    return status;
 }
 
 
@@ -1486,7 +1524,7 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
     WINE_MODREF *imp;
     int i, nb_imports;
     DWORD size;
-    NTSTATUS status;
+    NTSTATUS status, import_status;
     ULONG_PTR cookie;
 
     if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
@@ -1513,7 +1551,25 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
     for (i = 0; i < nb_imports; i++)
     {
         dep_after = wm->ldr.DdagNode->Dependencies.Tail;
-        if (!import_dll( wm, &imports[i], load_path, &imp ))
+        import_status = import_dll( wm, &imports[i], load_path, &imp );
+        if (PEAR_NATIVE_PE_LOADER)
+        {
+            /* A provider was loaded even when its requested export is absent.
+             * Transfer that reference to the existing dependency graph so the
+             * normal failed-module unload unwinds it exactly once. */
+            if (imp && imp->ldr.DdagNode != node_ntdll && imp->ldr.DdagNode != node_kernel32 &&
+                !add_module_dependency_after( wm->ldr.DdagNode, imp->ldr.DdagNode, dep_after ))
+            {
+                LdrUnloadDll( imp->ldr.DllBase );
+                if (!import_status) import_status = STATUS_NO_MEMORY;
+            }
+            if (import_status)
+            {
+                status = import_status;
+                break;
+            }
+        }
+        else if (import_status)
             status = STATUS_DLL_NOT_FOUND;
         else if (imp && imp->ldr.DdagNode != node_ntdll && imp->ldr.DdagNode != node_kernel32)
             add_module_dependency_after( wm->ldr.DdagNode, imp->ldr.DdagNode, dep_after );
@@ -2308,6 +2364,26 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name, 
             status = fixup_imports( wm, load_path );
         if (status != STATUS_SUCCESS)
         {
+            if (PEAR_NATIVE_PE_LOADER)
+            {
+                /* Retain the original typed import error. Existing loader
+                 * references own dependency release, TLS and view retirement;
+                 * do not detach bookkeeping before asking that owner to unwind. */
+                HMODULE failed_module = wm->ldr.DllBase;
+                NTSTATUS unwind_status;
+                *module = NULL;
+                unwind_status = LdrUnloadDll( failed_module );
+                if (unwind_status || (!free_lib_count && get_modref( failed_module )))
+                {
+                    /* Cyclic or externally retained failed loads are not a
+                     * supported recovery path. Never publish that partial
+                     * module, discard its references or silently leak it. */
+                    ERR( "Pear cannot unwind failed module (load %lx, unload %lx)\n",
+                         status, unwind_status );
+                    for (;;) NtTerminateProcess( NtCurrentProcess(), status );
+                }
+                return status;
+            }
             /* the module has only be inserted in the load & memory order lists */
             RemoveEntryList(&wm->ldr.InLoadOrderLinks);
             RemoveEntryList(&wm->ldr.InMemoryOrderLinks);

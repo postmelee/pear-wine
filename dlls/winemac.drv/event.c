@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "macdrv.h"
+#include "stage5_protocol.h"
 
 #include <poll.h>
 
@@ -376,6 +377,7 @@ void macdrv_handle_event(const macdrv_event *event)
     TRACE("%s for hwnd/window %p/%p\n", dbgstr_event(event->type), hwnd,
           event->window);
 
+    pear_stage5_window_any_event(event->window);
     prev = thread_data->current_event;
     thread_data->current_event = event;
 
@@ -439,6 +441,7 @@ void macdrv_handle_event(const macdrv_event *event)
         macdrv_window_brought_forward(hwnd);
         break;
     case WINDOW_CLOSE_REQUESTED:
+        pear_stage5_window_dispatch(event->window, hwnd);
         macdrv_window_close_requested(hwnd);
         break;
     case WINDOW_DID_MINIMIZE:

@@ -19,6 +19,8 @@
  */
 
 #include "config.h"
+#include "wine/pear_bootstrap.h"
+#include "wine/pear_stage3.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -40,23 +42,33 @@
 
 #include "main.h"
 
-#if defined(__APPLE__) && defined(__x86_64__) && !defined(HAVE_WINE_PRELOADER)
+#if defined(__APPLE__) && (defined(__x86_64__) || defined(__aarch64__)) && !defined(HAVE_WINE_PRELOADER)
 
-/* Not using the preloader on x86_64:
- * Reserve the same areas as the preloader does, but using zero-fill sections
+/* Without a preloader, reserve native heap exclusions using zero-fill sections
  * (the only way to prevent system frameworks from using them, including allocations
  * before main() runs).
  */
 __asm__(".zerofill WINE_RESERVE,WINE_RESERVE");
+#ifdef __aarch64__
+/* Swift's Darwin ARM64 ABI requires heap pointers above 4GB. Keep PIE and the
+ * 64KB null guard; a naturally ordered segment after native data excludes early
+ * framework allocations before main(). Do not use the x86_64 8GB reservation:
+ * it overlaps the ARM64 shared cache. Wine receives the actual slid range. */
+static char __wine_reserve[0xffff0000] __attribute__((section("WINE_RESERVE, WINE_RESERVE")));
+#else
 static char __wine_reserve[0x1fffff000] __attribute__((section("WINE_RESERVE, WINE_RESERVE")));
 
 __asm__(".zerofill WINE_TOP_DOWN,WINE_TOP_DOWN");
 static char __wine_top_down[0x001ff0000] __attribute__((section("WINE_TOP_DOWN, WINE_TOP_DOWN")));
 
+#endif
+
 static const struct wine_preload_info preload_info[] =
 {
-    { __wine_reserve,  sizeof(__wine_reserve)  }, /*         0x1000 -    0x200000000: low 8GB */
+    { __wine_reserve,  sizeof(__wine_reserve)  },
+#ifndef __aarch64__
     { __wine_top_down, sizeof(__wine_top_down) }, /* 0x7ff000000000 - 0x7ff001ff0000: top-down allocations + virtual heap */
+#endif
     { 0, 0 }                                      /* end of list */
 };
 
@@ -69,8 +81,17 @@ static void init_reserved_areas(void)
     for (i = 0; wine_main_preload_info[i].size != 0; i++)
     {
         /* Match how the preloader maps reserved areas: */
+#ifdef __aarch64__
+        if (mmap(wine_main_preload_info[i].addr, wine_main_preload_info[i].size, PROT_NONE,
+                 MAP_FIXED | MAP_NORESERVE | MAP_PRIVATE | MAP_ANON, -1, 0) != wine_main_preload_info[i].addr)
+        {
+            fputs("wine: ARM64 native heap reservation failed\n", stderr);
+            exit(1);
+        }
+#else
         mmap(wine_main_preload_info[i].addr, wine_main_preload_info[i].size, PROT_NONE,
              MAP_FIXED | MAP_NORESERVE | MAP_PRIVATE | MAP_ANON, -1, 0);
+#endif
     }
 }
 
@@ -175,6 +196,8 @@ int main( int argc, char *argv[] )
 {
     void *handle;
 
+    pear_stage3_register( "loader" );
+    pear_bootstrap_snapshot( "loader", "loader_entry" );
     init_reserved_areas();
 
     if ((handle = try_dlopen( get_self_exe() )) ||

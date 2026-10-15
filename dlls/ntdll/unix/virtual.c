@@ -89,6 +89,7 @@
 #include "wine/list.h"
 #include "wine/rbtree.h"
 #include "unix_private.h"
+#include "pear_pe_arena.h"
 #include "wine/debug.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(virtual);
@@ -128,6 +129,10 @@ struct file_view
     void         *base;          /* base address */
     size_t        size;          /* size in bytes */
     unsigned int  protect;       /* protection for all pages at allocation time and SEC_* flags */
+    unsigned int  pear_owned;    /* 0 normal, 1 reservation, 2 PE image, 3 dynamic private, 4 FEX owned */
+    struct pear_pe_slot *pear_slot;
+    struct pear_dynamic_slot *pear_dynamic;
+    ULONGLONG pear_generation;
 };
 
 /* per-page protection flags */
@@ -266,6 +271,7 @@ static inline BOOL use_aslr(void)
 /* mmap() anonymous memory at a fixed address */
 void *anon_mmap_fixed( void *start, size_t size, int prot, int flags )
 {
+    if (pear_pe_arena_overlaps( start, size )) { errno = EACCES; return MAP_FAILED; }
     assert( !((UINT_PTR)start & host_page_mask) );
     assert( !(size & host_page_mask) );
 
@@ -1743,6 +1749,7 @@ static void unmap_area( void *start, size_t size )
     struct reserved_area *area;
     void *end;
 
+    if (pear_pe_arena_overlaps( start, size )) pear_pe_arena_fatal( "generic arena unmap" );
     assert( !((UINT_PTR)start & host_page_mask) );
     size = ROUND_SIZE( 0, size, host_page_mask );
 
@@ -1828,8 +1835,16 @@ static void unregister_view( struct file_view *view )
  *
  * Deletes a view. virtual_mutex must be held by caller.
  */
+static void pear_release_owned_view( struct file_view *view );
+
 static void delete_view( struct file_view *view ) /* [in] View */
 {
+    if (view->pear_owned)
+    {
+        if (view->pear_owned != 2 && view->pear_owned != 3) pear_pe_arena_fatal( "generic reservation delete" );
+        pear_release_owned_view( view );
+        return;
+    }
     if (!(view->protect & VPROT_SYSTEM)) unmap_area( view->base, view->size );
     set_page_vprot( view->base, view->size, 0 );
     if (view->protect & VPROT_ARM64EC) clear_arm64ec_range( view->base, view->size );
@@ -1869,6 +1884,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
 
     while ((view = find_view_range( base, size )))
     {
+        if (view->pear_owned) return STATUS_CONFLICTING_ADDRESSES;
         TRACE( "overlapping view %p-%p for %p-%p\n",
                view->base, (char *)view->base + view->size, base, (char *)base + size );
         assert( view->protect & VPROT_SYSTEM );
@@ -1888,6 +1904,10 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
     view->base    = base;
     view->size    = size;
     view->protect = vprot;
+    view->pear_owned = 0;
+    view->pear_slot = NULL;
+    view->pear_dynamic = NULL;
+    view->pear_generation = 0;
     if (use_kernel_writewatch) vprot &= ~VPROT_WRITEWATCH;
     set_page_vprot( base, size, vprot );
 
@@ -1898,6 +1918,152 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
     return STATUS_SUCCESS;
 }
 
+
+/* Keep all arena bytes in Wine's ordinary view tree as disjoint occupied
+ * reservations/images. Only this adapter may split or coalesce these views;
+ * it never invokes a mapping or placeholder replacement operation. */
+static NTSTATUS pear_initialize_views(void)
+{
+    static BOOL initialized;
+    struct file_view *view;
+    void *base;
+    SIZE_T size;
+    NTSTATUS status;
+    if (initialized) return STATUS_SUCCESS;
+    if ((status = pear_pe_arena_initialize( &base, &size ))) return status;
+    if (find_view_range( base, size ) || is_beyond_limit( base, size, user_space_limit ) ||
+        is_beyond_limit( base, size, host_addr_space_limit ) ||
+        create_view( &view, base, size, 0 )) pear_pe_arena_fatal( "reservation view registration" );
+    view->pear_owned = 1;
+    initialized = TRUE;
+    return STATUS_SUCCESS;
+}
+
+static NTSTATUS pear_create_owned_view( struct file_view **ret, void *base, SIZE_T size )
+{
+    struct file_view *view = find_view( base, size ), *left = NULL, *right = NULL;
+    char *old_base, *old_end;
+    if (!view || view->pear_owned != 1) pear_pe_arena_fatal( "missing occupied reservation" );
+    old_base = view->base;
+    old_end = old_base + view->size;
+    if ((char *)base != old_base && !(left = alloc_view())) return STATUS_NO_MEMORY;
+    if ((char *)base + size != old_end && !(right = alloc_view()))
+    {
+        if (left) free_view( left );
+        return STATUS_NO_MEMORY;
+    }
+    unregister_view( view );
+    if (left)
+    {
+        memset( left, 0, sizeof(*left) );
+        left->base = old_base;
+        left->size = (char *)base - old_base;
+        left->pear_owned = 1;
+        register_view( left );
+    }
+    if (right)
+    {
+        memset( right, 0, sizeof(*right) );
+        right->base = (char *)base + size;
+        right->size = old_end - (char *)right->base;
+        right->pear_owned = 1;
+        register_view( right );
+    }
+    view->base = base;
+    view->size = size;
+    view->protect = 0;
+    view->pear_owned = 1;
+    view->pear_slot = NULL;
+    view->pear_dynamic = NULL;
+    view->pear_generation = 0;
+    register_view( view );
+    *ret = view;
+    return STATUS_SUCCESS;
+}
+
+static NTSTATUS pear_create_image_view( struct file_view **ret, struct pear_pe_slot *slot,
+                                       void *base, SIZE_T size )
+{
+    NTSTATUS status = pear_create_owned_view( ret, base, size );
+    if (status) return status;
+    (*ret)->protect = SEC_IMAGE | SEC_FILE | VPROT_COMMITTED | VPROT_READ | VPROT_EXEC | VPROT_WRITECOPY;
+    (*ret)->pear_owned = 2;
+    (*ret)->pear_slot = slot;
+    (*ret)->pear_generation = pear_pe_slot_generation( slot );
+    return STATUS_SUCCESS;
+}
+
+static NTSTATUS pear_reserve_dynamic_view( struct file_view **ret, SIZE_T size, unsigned int vprot )
+{
+    struct pear_dynamic_slot *slot;
+    void *base;
+    NTSTATUS status = pear_initialize_views();
+    if (status) return status;
+    if ((status = pear_dynamic_reserve( size, &slot, &base ))) return status;
+    if ((status = pear_create_owned_view( ret, base, size )))
+    {
+        if (pear_dynamic_release( slot, pear_dynamic_generation( slot ) ))
+            pear_pe_arena_fatal( "dynamic_failed_view_cleanup" );
+        return status;
+    }
+    (*ret)->protect = vprot; /* Genuine MEM_PRIVATE allocation, never SEC_IMAGE. */
+    (*ret)->pear_owned = 3;
+    (*ret)->pear_dynamic = slot;
+    (*ret)->pear_generation = pear_dynamic_generation( slot );
+    set_page_vprot( base, size, 0 );
+    return STATUS_SUCCESS;
+}
+
+static void pear_release_owned_view( struct file_view *view )
+{
+    struct wine_rb_entry *entry;
+    struct file_view *other;
+    if (view->protect & VPROT_ARM64EC)
+    {
+        clear_arm64ec_range(view->base, view->size);
+        view->protect &= ~VPROT_ARM64EC;
+    }
+    if (view->pear_owned == 3)
+    {
+        if (pear_dynamic_release( view->pear_dynamic, view->pear_generation ))
+            pear_pe_arena_fatal( "dynamic_release" );
+    }
+    else if (view->pear_owned == 2) pear_pe_slot_retire( view->pear_slot, view->pear_generation );
+    else if (view->pear_owned != 4) pear_pe_arena_fatal( "unknown owner view release" );
+    set_page_vprot( view->base, view->size, 0 );
+    view->protect = 0;
+    view->pear_owned = 1;
+    view->pear_slot = NULL;
+    view->pear_dynamic = NULL;
+    view->pear_generation = 0;
+    /* Adjacent unused ranges remain real occupied reservations, regardless of
+     * their retained per-page backing classes in the separate arena owner. */
+    if ((entry = rb_prev( &view->entry )))
+    {
+        other = WINE_RB_ENTRY_VALUE( entry, struct file_view, entry );
+        if (other->pear_owned == 1 && (char *)other->base + other->size == view->base)
+        {
+            unregister_view( view );
+            unregister_view( other );
+            other->size += view->size;
+            free_view( view );
+            view = other;
+            register_view( view );
+        }
+    }
+    if ((entry = rb_next( &view->entry )))
+    {
+        other = WINE_RB_ENTRY_VALUE( entry, struct file_view, entry );
+        if (other->pear_owned == 1 && (char *)view->base + view->size == other->base)
+        {
+            unregister_view( view );
+            unregister_view( other );
+            view->size += other->size;
+            free_view( other );
+            register_view( view );
+        }
+    }
+}
 
 /***********************************************************************
  *           get_win32_prot
@@ -1967,6 +2133,12 @@ static NTSTATUS get_vprot_flags( DWORD protect, unsigned int *vprot, BOOL image 
  */
 static inline int mprotect_exec( void *base, size_t size, int unix_prot )
 {
+    if (pear_pe_arena_overlaps( base, size ))
+    {
+        if (pear_pe_arena_matches_protection( base, size, unix_prot )) return 0;
+        errno = EACCES;
+        return -1;
+    }
     if (force_exec_prot && (unix_prot & PROT_READ) && !(unix_prot & PROT_EXEC))
     {
         TRACE( "forcing exec permission on %p-%p\n", base, (char *)base + size - 1 );
@@ -2016,6 +2188,16 @@ static int mprotect_range( void *base, size_t size, BYTE set, BYTE clear )
  */
 static BOOL set_vprot( struct file_view *view, void *base, size_t size, BYTE vprot )
 {
+    if (view->pear_owned)
+    {
+        if (view->pear_owned == 3)
+        {
+            if (pear_dynamic_protect( view->pear_dynamic, view->pear_generation, base, size, vprot, FALSE )) return FALSE;
+        }
+        else if (view->pear_owned != 2 || pear_pe_slot_protect( view->pear_slot, view->pear_generation, base, size, vprot )) return FALSE;
+        set_page_vprot( base, size, vprot );
+        return TRUE;
+    }
     if (!use_kernel_writewatch && view->protect & VPROT_WRITEWATCH)
     {
         /* each page may need different protections depending on write watch flag */
@@ -2052,6 +2234,19 @@ static NTSTATUS set_protection( struct file_view *view, void *base, SIZE_T size,
         if ((view->protect & access) != access) return STATUS_INVALID_PAGE_PROTECTION;
     }
 
+    /* Ordinary anonymous backing cannot acquire JIT authorization in place.
+     * Refuse before changing Wine's page metadata; do not fake API success. */
+    if (pear_pe_arena_enabled() && is_view_valloc( view ) && !view->pear_owned && (vprot & VPROT_EXEC))
+        return STATUS_NOT_SUPPORTED;
+    if (view->pear_owned == 3)
+    {
+        if (protect != PAGE_NOACCESS && protect != PAGE_READONLY &&
+            protect != PAGE_READWRITE && protect != PAGE_EXECUTE_READ) return STATUS_INVALID_PAGE_PROTECTION;
+        status = pear_dynamic_protect( view->pear_dynamic, view->pear_generation, base, size,
+                                       vprot | VPROT_COMMITTED, FALSE );
+        if (!status) set_page_vprot( base, size, vprot | VPROT_COMMITTED );
+        return status;
+    }
     if (!set_vprot( view, base, size, vprot | VPROT_COMMITTED )) return STATUS_ACCESS_DENIED;
     return STATUS_SUCCESS;
 }
@@ -2253,7 +2448,7 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
 
         if (!(view = find_view( base, 0 ))) return STATUS_INVALID_PARAMETER;
         if (view->base != base || view->size != size) return STATUS_CONFLICTING_ADDRESSES;
-        if (!(view->protect & VPROT_FREE_PLACEHOLDER)) return STATUS_INVALID_PARAMETER;
+        if (view->pear_owned || !(view->protect & VPROT_FREE_PLACEHOLDER)) return STATUS_INVALID_PARAMETER;
 
         TRACE( "found view %p, size %p, protect %#x.\n", view->base, (void *)view->size, view->protect );
 
@@ -2347,6 +2542,8 @@ static NTSTATUS map_file_into_view( struct file_view *view, int fd, size_t start
     int prot = PROT_READ | PROT_WRITE;
     unsigned int flags = MAP_FIXED;
 
+    if (view->pear_owned || pear_pe_arena_overlaps( view->base, view->size ))
+        return STATUS_CONFLICTING_ADDRESSES;
     assert( start < view->size );
     assert( start + size <= view->size );
 
@@ -2466,6 +2663,15 @@ static NTSTATUS decommit_pages( struct file_view *view, char *base, size_t size 
 {
     char *host_end, *host_start = (char *)ROUND_SIZE( 0, base, host_page_mask );
 
+    if (view->pear_owned == 3)
+    {
+        NTSTATUS status;
+        if (!size) size = view->size;
+        status = pear_dynamic_decommit( view->pear_dynamic, view->pear_generation, base, size );
+        if (!status) set_page_vprot( base, size, 0 );
+        return status;
+    }
+    if (view->pear_owned) return STATUS_INVALID_PARAMETER;
     if (!size)
     {
         size = view->size;
@@ -2488,6 +2694,7 @@ static NTSTATUS decommit_pages( struct file_view *view, char *base, size_t size 
  */
 static NTSTATUS remove_pages_from_view( struct file_view *view, char *base, size_t size )
 {
+    if (view->pear_owned) return STATUS_INVALID_PARAMETER;
     assert( size < view->size );
 
     if (view->base != base && base + size != (char *)view->base + view->size)
@@ -2502,6 +2709,10 @@ static NTSTATUS remove_pages_from_view( struct file_view *view, char *base, size
         new_view->base    = base + size;
         new_view->size    = (char *)view->base + view->size - (char *)new_view->base;
         new_view->protect = view->protect;
+        new_view->pear_owned = 0;
+        new_view->pear_slot = NULL;
+        new_view->pear_dynamic = NULL;
+        new_view->pear_generation = 0;
 
         unregister_view( view );
         view->size = base - (char *)view->base;
@@ -2538,6 +2749,7 @@ static NTSTATUS free_pages_preserve_placeholder( struct file_view *view, char *b
 {
     NTSTATUS status;
 
+    if (view->pear_owned) return STATUS_INVALID_PARAMETER;
     if (!size) return STATUS_INVALID_PARAMETER_3;
     if (!(view->protect & VPROT_PLACEHOLDER)) return STATUS_CONFLICTING_ADDRESSES;
     if (view->protect & VPROT_FREE_PLACEHOLDER && size == view->size) return STATUS_CONFLICTING_ADDRESSES;
@@ -2577,6 +2789,7 @@ static NTSTATUS free_pages( struct file_view *view, char *base, size_t size )
     char *host_end = base + size;
     NTSTATUS status;
 
+    if (view->pear_owned) return STATUS_INVALID_PARAMETER;
     if (size == view->size)
     {
         assert( base == view->base );
@@ -2627,6 +2840,7 @@ static NTSTATUS coalesce_placeholders( struct file_view *view, char *base, size_
     unsigned int i, view_count = 0;
     size_t views_size = 0;
 
+    if (view->pear_owned) return STATUS_INVALID_PARAMETER;
     if (!size) return STATUS_INVALID_PARAMETER_3;
     if (base != view->base) return STATUS_CONFLICTING_ADDRESSES;
 
@@ -2722,6 +2936,7 @@ static NTSTATUS allocate_dos_memory( struct file_view **view, unsigned int vprot
  */
 static NTSTATUS map_pe_header( void *ptr, size_t size, size_t map_size, int fd, BOOL *removable )
 {
+    if (pear_pe_arena_overlaps( ptr, max( size, map_size ) )) return STATUS_CONFLICTING_ADDRESSES;
     if (!size) return STATUS_INVALID_IMAGE_FORMAT;
 
     map_size &= ~host_page_mask;
@@ -2795,9 +3010,10 @@ static void *get_host_addr_space_limit(void)
  */
 BOOL is_emulated_code( ULONG_PTR ptr )
 {
-    const UINT64 *map = arm64ec_view->base;
+    const UINT64 *map;
     ULONG_PTR page = ptr / page_size;
     if (!is_arm64ec() || ptr >= (ULONG_PTR)user_space_limit) return FALSE;
+    map = arm64ec_view->base;
     return !((map[page / 64] >> (page & 63)) & 1);
 }
 
@@ -3103,7 +3319,14 @@ static NTSTATUS map_image_into_view( struct file_view *view, const UNICODE_STRIN
         }
 
         /* set the image protections */
-        set_vprot( view, ptr, total_size, VPROT_COMMITTED | VPROT_READ | VPROT_WRITECOPY | VPROT_EXEC );
+        if (!set_vprot( view, ptr, total_size, VPROT_COMMITTED | VPROT_READ | VPROT_WRITECOPY | VPROT_EXEC ))
+        {
+            int err = errno;
+            ERR( "failed to set flat image protection on %s, errno %d (%s)\n",
+                 debugstr_us(nt_name), err, strerror(err) );
+            status = STATUS_ACCESS_DENIED;
+            goto done;
+        }
 
         /* no relocations are performed on non page-aligned binaries */
         status = STATUS_SUCCESS;
@@ -3246,7 +3469,14 @@ static NTSTATUS map_image_into_view( struct file_view *view, const UNICODE_STRIN
 
     /* set the image protections */
 
-    set_vprot( view, ptr, ROUND_SIZE( 0, header_size, align_mask ), VPROT_COMMITTED | VPROT_READ );
+    if (!set_vprot( view, ptr, ROUND_SIZE( 0, header_size, align_mask ), VPROT_COMMITTED | VPROT_READ ))
+    {
+        int err = errno;
+        ERR( "failed to set image header protection on %s, errno %d (%s)\n",
+             debugstr_us(nt_name), err, strerror(err) );
+        status = STATUS_ACCESS_DENIED;
+        goto done;
+    }
 
     for (i = 0; i < nt->FileHeader.NumberOfSections; i++)
     {
@@ -3262,9 +3492,14 @@ static NTSTATUS map_image_into_view( struct file_view *view, const UNICODE_STRIN
         if (sec[i].Characteristics & IMAGE_SCN_MEM_WRITE)   vprot |= VPROT_WRITECOPY;
         if (sec[i].Characteristics & IMAGE_SCN_MEM_EXECUTE) vprot |= VPROT_EXEC;
 
-        if (!set_vprot( view, ptr + sec[i].VirtualAddress, size, vprot ) && (vprot & VPROT_EXEC))
-            ERR( "failed to set %08x protection on %s section %.8s, noexec filesystem?\n",
-                 sec[i].Characteristics, debugstr_us(nt_name), sec[i].Name );
+        if (!set_vprot( view, ptr + sec[i].VirtualAddress, size, vprot ))
+        {
+            int err = errno;
+            ERR( "failed to set %08x protection on %s section %.8s, errno %d (%s)\n",
+                 sec[i].Characteristics, debugstr_us(nt_name), sec[i].Name, err, strerror(err) );
+            status = STATUS_ACCESS_DENIED;
+            goto done;
+        }
     }
 
 #ifdef VALGRIND_LOAD_PDB_DEBUGINFO
@@ -3403,6 +3638,8 @@ static NTSTATUS map_image_view( struct file_view **view_ret, struct pe_image_inf
  *
  * Map a PE image section into memory.
  */
+static NTSTATUS pear_register_ec_image(struct file_view *view, const struct pear_pe_image *image);
+
 static NTSTATUS virtual_map_image( HANDLE mapping, void **addr_ptr, SIZE_T *size_ptr,
                                    ULONG_PTR limit_low, ULONG_PTR limit_high, ULONG alloc_type,
                                    struct pe_mapping_info *pe_mapping, USHORT machine,
@@ -3443,11 +3680,68 @@ static NTSTATUS virtual_map_image( HANDLE mapping, void **addr_ptr, SIZE_T *size
 
     server_enter_uninterrupted_section( &virtual_mutex, &sigset );
 
-    status = map_image_view( &view, &pe_mapping->image, size, limit_low, limit_high, alloc_type );
-    if (status) goto done;
-
-    status = map_image_into_view( view, &pe_mapping->nt_name, unix_fd, &pe_mapping->image,
-                                  machine, shared_fd, needs_close );
+    if (pear_pe_arena_enabled())
+    {
+        struct pear_pe_plan *plan = NULL;
+        struct pear_pe_slot *slot;
+        struct pear_pe_image image;
+        SIZE_T capacity, page;
+        void *base;
+        USHORT selected_machine = machine ? machine : main_image_info.Machine;
+        /* main_image_info is not initialized until the main mapping returns.
+         * Select that first image from its server-validated PE machine. */
+        if (!selected_machine) selected_machine = pe_mapping->image.machine;
+        pear_pe_diagnostic(unix_fd, "caller.begin", STATUS_SUCCESS);
+        if (offset || alloc_type || shared_fd != -1 ||
+            (selected_machine != IMAGE_FILE_MACHINE_ARM64 && selected_machine != IMAGE_FILE_MACHINE_AMD64) ||
+            (pe_mapping->image.machine != IMAGE_FILE_MACHINE_ARM64 && pe_mapping->image.machine != IMAGE_FILE_MACHINE_AMD64))
+        { status = pear_pe_diagnostic(unix_fd, "caller.parameters", STATUS_NOT_SUPPORTED); goto done; }
+        status = pear_pe_plan_read_target( unix_fd, selected_machine, &plan, &image );
+        pear_pe_diagnostic(unix_fd, "caller.parsed", status);
+        if (status)
+        {
+            ERR("Pear PE role selection failed: target=%04x image=%04x status=%08x\n",
+                selected_machine, pe_mapping->image.machine, status);
+            goto done;
+        }
+        if (image.size != size || image.original_base != pe_mapping->image.base ||
+            image.original_entry_rva != pe_mapping->image.entry_point || image.original_machine != pe_mapping->image.machine)
+        { status = STATUS_INVALID_IMAGE_FORMAT; pear_pe_plan_free( plan ); goto done; }
+        status = pear_initialize_views();
+        pear_pe_diagnostic(unix_fd, "caller.initialized", status);
+        if (!status) status = pear_pe_slot_reserve( plan, max( limit_low, (ULONG_PTR)address_space_start ),
+                              limit_high ? limit_high : (ULONG_PTR)user_space_limit - 1, &slot, &base, &capacity );
+        pear_pe_diagnostic(unix_fd, "caller.reserved", status);
+        if (status) { pear_pe_plan_free( plan ); goto done; }
+        status = pear_create_image_view( &view, slot, base, size );
+        pear_pe_diagnostic(unix_fd, "caller.view", status);
+        if (status)
+        {
+            pear_pe_slot_retire( slot, pear_pe_slot_generation( slot ) );
+            pear_pe_plan_free( plan );
+            goto done;
+        }
+        status = pear_pe_slot_publish( slot, view->pear_generation, plan );
+        pear_pe_diagnostic(unix_fd, "caller.published", status);
+        pear_pe_plan_free( plan );
+        if (!status)
+            for (page = 0; page < size; page += page_size)
+                set_page_vprot( (char *)base + page, page_size, pear_pe_slot_vprot( slot, view->pear_generation, page ));
+        if (!status && image.role == PEAR_PE_ROLE_ARM64EC) status = pear_register_ec_image(view, &image);
+        TRACE_(module)("Pear image publication role=%u machine=%04x status=%08x\n", image.role, image.machine, status);
+        if (!status)
+        {
+            pe_mapping->image.machine = image.machine;
+            pe_mapping->image.entry_point = image.role == PEAR_PE_ROLE_ARM64EC ? image.native_entry_rva : image.entry_rva;
+        }
+    }
+    else
+    {
+        status = map_image_view( &view, &pe_mapping->image, size, limit_low, limit_high, alloc_type );
+        if (status) goto done;
+        status = map_image_into_view( view, &pe_mapping->nt_name, unix_fd, &pe_mapping->image,
+                                     machine, shared_fd, needs_close );
+    }
     if (status == STATUS_SUCCESS)
     {
         if (offset)
@@ -3479,6 +3773,7 @@ static NTSTATUS virtual_map_image( HANDLE mapping, void **addr_ptr, SIZE_T *size
     else delete_view( view );
 
 done:
+    TRACE_(module)("Pear image mapping status=%08x\n", status);
     server_leave_uninterrupted_section( &virtual_mutex, &sigset );
     if (needs_close) close( unix_fd );
     if (shared_needs_close) close( shared_fd );
@@ -3534,6 +3829,14 @@ static unsigned int virtual_map_section( HANDLE handle, PVOID *addr_ptr, ULONG_P
     if (res) return res;
 
     offset.QuadPart = offset_ptr ? offset_ptr->QuadPart : 0;
+
+    if (pe_mapping && pear_pe_arena_enabled() && *addr_ptr)
+    {
+        /* This owner admits relocatable images only; do not silently ignore a
+         * caller's fixed-address request or overwrite an existing mapping. */
+        free_pe_mapping_info( pe_mapping );
+        return STATUS_NOT_SUPPORTED;
+    }
 
     if (pe_mapping)
     {
@@ -5094,6 +5397,7 @@ void virtual_set_force_exec( BOOL enable )
         {
             /* file mappings are always accessible */
             BYTE commit = is_view_valloc( view ) ? 0 : VPROT_COMMITTED;
+            if (view->pear_owned) continue;
 
             mprotect_range( view->base, view->size, commit, 0 );
         }
@@ -5114,7 +5418,7 @@ void virtual_enable_write_exceptions( BOOL enable )
     if (!enable_write_exceptions && enable)  /* change all existing views */
     {
         WINE_RB_FOR_EACH_ENTRY( view, &views_tree, struct file_view, entry )
-            if (set_page_vprot_exec_write_protect( view->base, view->size ))
+            if (!view->pear_owned && set_page_vprot_exec_write_protect( view->base, view->size ))
                 mprotect_range( view->base, view->size, 0, 0 );
     }
     enable_write_exceptions = enable;
@@ -5223,6 +5527,13 @@ static NTSTATUS allocate_virtual_memory( void **ret, SIZE_T *size_ptr, ULONG typ
             if (protect & PAGE_NOCACHE) vprot |= SEC_NOCACHE;
 
             if (vprot & VPROT_WRITECOPY) status = STATUS_INVALID_PAGE_PROTECTION;
+            else if (pear_pe_arena_enabled() && (vprot & VPROT_EXEC))
+            {
+                if (vprot & (VPROT_WRITE | VPROT_WRITECOPY)) status = STATUS_INVALID_PAGE_PROTECTION;
+                else if (base || type != MEM_RESERVE || protect != PAGE_EXECUTE_READ ||
+                         limit_low || limit_high || align || attributes) status = STATUS_NOT_SUPPORTED;
+                else status = pear_reserve_dynamic_view( &view, size, vprot );
+            }
             else if (is_dos_memory) status = allocate_dos_memory( &view, vprot );
             else status = map_view( &view, base, size, type, vprot, limit_low, limit_high,
                                     align ? align - 1 : granularity_mask );
@@ -5230,18 +5541,32 @@ static NTSTATUS allocate_virtual_memory( void **ret, SIZE_T *size_ptr, ULONG typ
             if (status == STATUS_SUCCESS)
             {
                 base = view->base;
-                if (vprot & VPROT_EXEC || force_exec_prot) mprotect_range( base, size, 0, 0 );
+                if (view->pear_owned != 3 && (vprot & VPROT_EXEC || force_exec_prot)) mprotect_range( base, size, 0, 0 );
             }
         }
     }
     else if (type & MEM_RESET)
     {
         if (!(view = find_view( base, size ))) status = STATUS_NOT_MAPPED_VIEW;
+        else if (view->pear_owned) status = STATUS_INVALID_PARAMETER;
         else madvise( base, size, MADV_DONTNEED );
     }
     else  /* commit the pages */
     {
         if (!(view = find_view( base, size ))) status = STATUS_NOT_MAPPED_VIEW;
+        else if (view->pear_owned == 3)
+        {
+            if (type != MEM_COMMIT || attributes || align || limit_low || limit_high) status = STATUS_NOT_SUPPORTED;
+            else if (protect != PAGE_NOACCESS && protect != PAGE_READONLY &&
+                     protect != PAGE_READWRITE && protect != PAGE_EXECUTE_READ) status = STATUS_INVALID_PAGE_PROTECTION;
+            else if (!(status = get_vprot_flags( protect, &vprot, FALSE )))
+            {
+                status = pear_dynamic_protect( view->pear_dynamic, view->pear_generation, base, size,
+                                               vprot | VPROT_COMMITTED, TRUE );
+                if (!status) set_page_vprot( base, size, vprot | VPROT_COMMITTED );
+            }
+        }
+        else if (view->pear_owned) status = STATUS_INVALID_PARAMETER;
         else if (view->protect & SEC_FILE) status = STATUS_ALREADY_COMMITTED;
         else if (view->protect & VPROT_FREE_PLACEHOLDER) status = STATUS_CONFLICTING_ADDRESSES;
         else if (!(status = set_protection( view, base, size, protect )) && (view->protect & SEC_RESERVE))
@@ -5534,7 +5859,19 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
         status = STATUS_INVALID_PARAMETER;
     }
     else if (!(view = find_view( base, 0 ))) status = STATUS_MEMORY_NOT_ALLOCATED;
-    else if (!is_view_valloc( view )) status = STATUS_INVALID_PARAMETER;
+    else if (view->pear_owned == 3)
+    {
+        if (!size && base != view->base) status = STATUS_FREE_VM_NOT_AT_BASE;
+        else if ((char *)view->base + view->size - base < size) status = STATUS_UNABLE_TO_FREE_VM;
+        else if (type == MEM_DECOMMIT) status = decommit_pages( view, base, size );
+        else if (type == MEM_RELEASE && !size && base == view->base)
+        {
+            size = view->size;
+            pear_release_owned_view( view );
+        }
+        else status = STATUS_INVALID_PARAMETER;
+    }
+    else if (view->pear_owned || !is_view_valloc( view )) status = STATUS_INVALID_PARAMETER;
     else if (!size && base != view->base) status = STATUS_FREE_VM_NOT_AT_BASE;
     else if ((char *)view->base + view->size - base < size && !(type & MEM_COALESCE_PLACEHOLDERS))
              status = STATUS_UNABLE_TO_FREE_VM;
@@ -5740,6 +6077,17 @@ static unsigned int fill_basic_memory_info( const void *addr, MEMORY_BASIC_INFOR
 
     server_enter_uninterrupted_section( &virtual_mutex, &sigset );
     view = get_memory_region_size( base, &alloc_base, &alloc_end, &fake_reserved );
+    if (view && view->pear_owned == 1)
+    {
+        void *free_start, *free_end;
+        if (pear_dynamic_free_range( base, &free_start, &free_end ))
+        {
+            view = NULL;
+            alloc_base = free_start;
+            alloc_end = free_end;
+            fake_reserved = FALSE;
+        }
+    }
 
     /* Fill the info structure */
 
@@ -6534,6 +6882,8 @@ static NTSTATUS unmap_view_of_section( HANDLE process, PVOID addr, ULONG flags )
     server_enter_uninterrupted_section( &virtual_mutex, &sigset );
     if (!(view = find_view( addr, 0 )) || is_view_valloc( view )) goto done;
 
+    if (view->pear_owned && (view->pear_owned != 2 || flags))
+    { status = STATUS_INVALID_PARAMETER; goto done; }
     if (flags & MEM_PRESERVE_PLACEHOLDER && !(view->protect & VPROT_PLACEHOLDER))
     {
         status = STATUS_CONFLICTING_ADDRESSES;
@@ -6564,7 +6914,11 @@ static NTSTATUS unmap_view_of_section( HANDLE process, PVOID addr, ULONG flags )
         if (flags & MEM_PRESERVE_PLACEHOLDER) free_pages_preserve_placeholder( view, view->base, view->size );
         else delete_view( view );
     }
-    else FIXME( "failed to unmap %p %x\n", view->base, status );
+    else
+    {
+        if (view->pear_owned) pear_pe_arena_fatal( "server image unmap" );
+        FIXME( "failed to unmap %p %x\n", view->base, status );
+    }
 done:
     server_leave_uninterrupted_section( &virtual_mutex, &sigset );
     return status;
@@ -7317,3 +7671,759 @@ NTSTATUS WINAPI NtWow64IsProcessorFeaturePresent( UINT feature )
 }
 
 #endif  /* _WIN64 */
+
+/* Original Pear Wine/FEX owner-view adapter, MIT-licensed. Source owner waits
+ * before these callbacks acquire virtual_mutex. No raw-signal call is allowed. */
+#include "pear_fex_memory_private.h"
+#include <stdatomic.h>
+
+struct pear_fex_view_record {
+    void *base;
+    SIZE_T size;
+    uint64_t id, generation;
+    uint32_t allocation_class, role;
+};
+static struct pear_fex_view_record pear_fex_views[PEAR_FEX_MEMORY_MAX_EXTENTS];
+static struct pear_fex_memory_backing pear_fex_wine_backing;
+static _Atomic unsigned pear_fex_wine_quarantined;
+_Static_assert(sizeof(pear_fex_views) <= 8192, "Finite new Wine owner view metadata");
+
+static BOOL pear_fex_fixture_enabled(void)
+{
+#ifdef PEAR_FEX_MEMORY_FINITE_FIXTURE
+    const char *nonce = getenv("PEAR_FEX_MEMORY_FIXTURE_NONCE");
+    unsigned int i;
+    if (!nonce || strlen(nonce) != 32) return FALSE;
+    for (i = 0; i < 32; ++i)
+        if (!((nonce[i] >= '0' && nonce[i] <= '9') || (nonce[i] >= 'a' && nonce[i] <= 'f'))) return FALSE;
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+static void pear_fex_nt_error(struct pear_fex_memory_error *error, NTSTATUS status)
+{
+    error->domain = PEAR_FEX_ERROR_NTSTATUS; error->code = (int32_t)status;
+}
+static struct pear_fex_view_record *pear_fex_view_at(void *base, SIZE_T size)
+{
+    unsigned int i;
+    ULONG_PTR start = (ULONG_PTR)base;
+    for (i = 0; i < PEAR_FEX_MEMORY_MAX_EXTENTS; ++i)
+    {
+        struct pear_fex_view_record *record = &pear_fex_views[i];
+        if (record->id && start >= (ULONG_PTR)record->base &&
+            start-(ULONG_PTR)record->base <= record->size &&
+            size <= record->size-(start-(ULONG_PTR)record->base)) return record;
+    }
+    return NULL;
+}
+static int pear_fex_wine_initialize(struct pear_fex_memory_backing *backing,
+                                     struct pear_fex_memory_error *error)
+{
+    sigset_t sigset;
+    NTSTATUS status;
+    int result;
+    server_enter_uninterrupted_section(&virtual_mutex, &sigset);
+    status = pear_initialize_views();
+    if (status) { pear_fex_nt_error(error, status); result = 1; }
+    else
+    {
+        result = pear_fex_backing_initialize(backing, error);
+        if (!result) pear_fex_wine_backing = *backing;
+    }
+    server_leave_uninterrupted_section(&virtual_mutex, &sigset);
+    return result;
+}
+/* Lower-bound available capacity, saturated before any new allocation. */
+/* Caller holds virtual_mutex. Reuse the bounded observer at the allocation
+ * boundary so a stale earlier snapshot cannot cause a new 1-MiB view block. */
+static int pear_fex_available_views(uint64_t *count)
+{
+    uint64_t available;
+    struct file_view *cursor, *slow, *fast;
+    *count = 0;
+    if (!view_block_start || !view_block_end || view_block_end < view_block_start ||
+        (uint64_t)(view_block_end - view_block_start) > view_block_size / sizeof(struct file_view)) return 1;
+    available = view_block_end - view_block_start;
+    cursor = slow = fast = next_free_view;
+    while (available < PEAR_FEX_MEMORY_OBSERVATION_SLOTS && cursor)
+    {
+        ++available;
+        cursor = *(struct file_view **)cursor;
+        slow = slow ? *(struct file_view **)slow : NULL;
+        fast = fast ? *(struct file_view **)fast : NULL;
+        fast = fast ? *(struct file_view **)fast : NULL;
+        if (slow && slow == fast) return 1;
+    }
+    *count = min(available, PEAR_FEX_MEMORY_OBSERVATION_SLOTS);
+    return 0;
+}
+
+static int pear_fex_wine_metadata(struct pear_fex_memory_metadata *out,
+                                  struct pear_fex_memory_error *error)
+{
+    sigset_t sigset;
+    uint64_t base, first, old_last, last, i;
+    int result = 1;
+    server_enter_uninterrupted_section(&virtual_mutex, &sigset);
+    if (atomic_load_explicit(&pear_fex_wine_quarantined, memory_order_acquire) ||
+        pear_fex_backing_metadata(out, &base, error)) goto done;
+    out->leaf_coverage_bytes = UINT64_C(1) << (page_shift + pages_vprot_shift);
+    out->leaf_backing_bytes = UINT64_C(1) << pages_vprot_shift;
+    if (!out->mapping_bytes || !out->baseline_mapping_bytes ||
+        out->baseline_mapping_bytes > out->mapping_bytes ||
+        base > UINT64_MAX - out->mapping_bytes) goto invalid;
+    first = base / out->leaf_coverage_bytes;
+    old_last = (base + out->baseline_mapping_bytes - 1) / out->leaf_coverage_bytes;
+    last = (base + out->mapping_bytes - 1) / out->leaf_coverage_bytes;
+    if (last >= pages_vprot_size || last - first > 1) goto invalid;
+    for (i = first; i <= last; ++i) if (!pages_vprot[i]) goto invalid;
+    out->baseline_leaves = old_last - first + 1;
+    /* Charge all extension-only leaves even if some predated the reservation. */
+    out->additional_leaves = last - old_last;
+    if (pear_fex_available_views(&out->available_view_slots)) goto invalid;
+    out->view_block_bytes = view_block_size;
+    out->view_record_bytes = sizeof(struct file_view);
+    out->fixed_native_bytes = sizeof(pear_fex_views) + sizeof(pear_fex_wine_backing) + sizeof(pear_fex_wine_quarantined);
+    result = 0;
+    goto done;
+ invalid:
+    pear_fex_nt_error(error, STATUS_INVALID_PARAMETER);
+ done:
+    server_leave_uninterrupted_section(&virtual_mutex, &sigset);
+    return result;
+}
+static int pear_fex_wine_query(uint64_t offset, uint64_t size, uint32_t protection,
+                                struct pear_fex_memory_error *error)
+{
+    return pear_fex_backing_query(offset, size, protection, error);
+}
+static int pear_fex_wine_protect(uint64_t offset, uint64_t size, uint32_t protection,
+                                  struct pear_fex_memory_error *error)
+{
+    struct pear_fex_memory_backing backing;
+    struct pear_fex_view_record *record;
+    struct file_view *view;
+    void *base;
+    sigset_t sigset;
+    unsigned int vprot;
+    int result = 1;
+    memset(error, 0, sizeof(*error));
+    server_enter_uninterrupted_section(&virtual_mutex, &sigset);
+    backing = pear_fex_wine_backing;
+    if (!backing.private_base || backing.owner_pid != (uint64_t)getpid()) goto done;
+    base = (char *)(uintptr_t)backing.private_base+offset;
+    if (!(record = pear_fex_view_at(base, size)) || !(view = find_view(base, size)) ||
+        view->pear_owned != 4 || view->pear_generation != record->generation) goto done;
+    if (pear_fex_backing_protect(offset, size, protection, error)) goto done;
+    vprot = protection == PEAR_FEX_PROTECTION_NONE ? 0 :
+            protection == PEAR_FEX_PROTECTION_RW_NX ? VPROT_READ|VPROT_WRITE|VPROT_COMMITTED :
+            VPROT_READ|VPROT_EXEC|VPROT_COMMITTED;
+    set_page_vprot(base, size, vprot);
+    result = 0;
+ done:
+    server_leave_uninterrupted_section(&virtual_mutex, &sigset);
+    return result;
+}
+
+#if defined(__APPLE__) && defined(__aarch64__)
+/* Private finite diagnostic storage; no pointer, permission or lifetime
+ * authority. These bounds are contributions to the still-unclosed aggregate
+ * NX accounting, not actual paired-target sizeof observations. */
+struct pear_fex_bitmap_vm_diagnostic
+{
+    unsigned int mode, performed, calls, port_release_performed;
+    int expected, region_code, port_release_code;
+    unsigned int count, protection, maximum, predicate_failed;
+};
+struct pear_fex_bitmap_diagnostic
+{
+    unsigned int failures, created_bitmap, bitmap_prepared, page_count_performed, page_count;
+    unsigned int force_exec, original_bitmap_present, original_peb_present;
+    unsigned int first_page_performed, first_page, previous_vprot, current_vprot;
+    unsigned int set_vprot_performed, set_vprot_succeeded;
+    unsigned int release_performed, release_classification_performed, release_arena_check_performed;
+    int release_reserved;
+    unsigned int release_arena_overlap, release_method, release_native_performed, release_native_succeeded;
+    unsigned int final_bitmap_equal, final_peb_equal;
+    struct pear_fex_bitmap_vm_diagnostic cleanup_vm, page_vm, release_vm;
+};
+_Static_assert(sizeof(struct pear_fex_bitmap_diagnostic) + sizeof(struct pear_fex_bitmap_vm_diagnostic) <= 320,
+               "Bounded bitmap diagnostic and transient page observation; aggregate accounting remains open");
+
+static int pear_fex_bitmap_observe(void *pointer, SIZE_T size, int expected,
+                                  struct pear_fex_memory_error *error,
+                                  struct pear_fex_bitmap_vm_diagnostic *diagnostic)
+{
+    mach_vm_address_t cursor = (uintptr_t)pointer, end;
+    if (diagnostic) { memset(diagnostic, 0, sizeof(*diagnostic)); diagnostic->mode = 1; diagnostic->expected = expected; }
+    if (!size || cursor > UINT64_MAX-size)
+    { if (diagnostic) diagnostic->predicate_failed = 1; return 1; }
+    end = cursor+size;
+    while (cursor < end)
+    {
+        mach_vm_address_t address = cursor;
+        mach_vm_size_t length = 0;
+        vm_region_basic_info_data_64_t info = {0};
+        mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
+        mach_port_t object = MACH_PORT_NULL;
+        kern_return_t code = mach_vm_region(mach_task_self(), &address, &length,
+            VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &count, &object);
+        if (diagnostic)
+        {
+            diagnostic->performed = 1; ++diagnostic->calls; diagnostic->region_code = code;
+            diagnostic->count = count; diagnostic->protection = info.protection; diagnostic->maximum = info.max_protection;
+            diagnostic->port_release_performed = 0; diagnostic->port_release_code = 0;
+        }
+        if (object != MACH_PORT_NULL)
+        {
+            kern_return_t released = mach_port_deallocate(mach_task_self(), object);
+            if (diagnostic) { diagnostic->port_release_performed = 1; diagnostic->port_release_code = released; }
+            if (code == KERN_SUCCESS && released != KERN_SUCCESS) code = released;
+        }
+        if (code != KERN_SUCCESS)
+        { error->domain = PEAR_FEX_ERROR_MACH; error->code = (int32_t)code; return 1; }
+        if (count != VM_REGION_BASIC_INFO_COUNT_64 || address > cursor || !length ||
+            address > UINT64_MAX-length || address+length <= cursor || info.protection != expected ||
+            (info.max_protection & expected) != expected)
+        { if (diagnostic) diagnostic->predicate_failed = 1; return 1; }
+        cursor = min(address+length, end);
+    }
+    return 0;
+}
+static int pear_fex_bitmap_protection(void *pointer, SIZE_T size, int expected,
+                                      struct pear_fex_memory_error *error)
+{
+    return pear_fex_bitmap_observe(pointer, size, expected, error, NULL);
+}
+/* Outside Wine's reserved ranges, a successful munmap is independently
+ * observed as a hole. Inside a pre-existing reservation, restore NONE without
+ * dropping that reservation or constructing a replacement fixed mapping. */
+static int pear_fex_bitmap_hole(void *pointer, SIZE_T size,
+                                struct pear_fex_memory_error *error,
+                                struct pear_fex_bitmap_vm_diagnostic *diagnostic)
+{
+    mach_vm_address_t address = (uintptr_t)pointer;
+    mach_vm_size_t length = 0;
+    vm_region_basic_info_data_64_t info = {0};
+    mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
+    mach_port_t object = MACH_PORT_NULL;
+    kern_return_t code;
+    if (diagnostic) { memset(diagnostic, 0, sizeof(*diagnostic)); diagnostic->mode = 2; }
+    if (!size || address > UINT64_MAX-size)
+    { if (diagnostic) diagnostic->predicate_failed = 1; return 1; }
+    code = mach_vm_region(mach_task_self(), &address, &length,
+        VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &count, &object);
+    if (diagnostic)
+    {
+        diagnostic->performed = 1; diagnostic->calls = 1; diagnostic->region_code = code;
+        diagnostic->count = count; diagnostic->protection = info.protection; diagnostic->maximum = info.max_protection;
+    }
+    if (object != MACH_PORT_NULL)
+    {
+        kern_return_t released = mach_port_deallocate(mach_task_self(), object);
+        if (diagnostic) { diagnostic->port_release_performed = 1; diagnostic->port_release_code = released; }
+        if (code == KERN_SUCCESS && released != KERN_SUCCESS) code = released;
+    }
+    if (code == KERN_INVALID_ADDRESS) return 0;
+    if (code != KERN_SUCCESS)
+    { error->domain = PEAR_FEX_ERROR_MACH; error->code = (int32_t)code; return 1; }
+    if (count != VM_REGION_BASIC_INFO_COUNT_64 || !length || address < (uintptr_t)pointer+size)
+    { if (diagnostic) diagnostic->predicate_failed = 1; return 1; }
+    return 0;
+}
+/* Bitmap cleanup uses half-open intervals. The legacy classifier treats
+ * a reservation beginning exactly at the view end as a partial overlap.
+ * Keep genuine partial overlaps refused and preserve the generic Wine helper. */
+static int pear_fex_bitmap_reserved_area(const void *base, SIZE_T size)
+{
+    const UINT_PTR start = (UINT_PTR)base;
+    UINT_PTR end;
+    struct reserved_area *area;
+    if (!size || start > ~(UINT_PTR)0-size) return -1;
+    end = start+size;
+    LIST_FOR_EACH_ENTRY(area, &reserved_areas, struct reserved_area, entry)
+    {
+        UINT_PTR area_start = (UINT_PTR)area->base, area_end;
+        if (!area->size || area_start > ~(UINT_PTR)0-area->size) return -1;
+        area_end = area_start+area->size;
+        if (area_start >= end) break;
+        if (area_end <= start) continue;
+        if (area_start > start || area_end < end) return -1;
+        return 1;
+    }
+    return 0;
+}
+static int pear_fex_bitmap_release(struct file_view *temporary,
+                                   struct pear_fex_memory_error *error,
+                                   struct pear_fex_bitmap_diagnostic *diagnostic)
+{
+    int reserved = pear_fex_bitmap_reserved_area(temporary->base, temporary->size);
+    diagnostic->release_performed = diagnostic->release_classification_performed = 1;
+    diagnostic->release_reserved = reserved;
+    if (reserved < 0) { diagnostic->failures |= 32; return 1; }
+    diagnostic->release_arena_check_performed = 1;
+    diagnostic->release_arena_overlap = pear_pe_arena_overlaps(temporary->base, temporary->size);
+    if (diagnostic->release_arena_overlap) { diagnostic->failures |= 64; return 1; }
+    if (reserved)
+    {
+        diagnostic->release_method = 1; diagnostic->release_native_performed = 1;
+        if (mprotect(temporary->base, temporary->size, PROT_NONE))
+        { diagnostic->failures |= 128; error->domain = PEAR_FEX_ERROR_ERRNO; error->code = errno; return 1; }
+        diagnostic->release_native_succeeded = 1;
+        if (pear_fex_bitmap_observe(temporary->base, temporary->size, PROT_NONE, error, &diagnostic->release_vm))
+        { diagnostic->failures |= 256; return 1; }
+    }
+    else
+    {
+        diagnostic->release_method = 2; diagnostic->release_native_performed = 1;
+        if (munmap(temporary->base, temporary->size))
+        { diagnostic->failures |= 512; error->domain = PEAR_FEX_ERROR_ERRNO; error->code = errno; return 1; }
+        diagnostic->release_native_succeeded = 1;
+        if (pear_fex_bitmap_hole(temporary->base, temporary->size, error, &diagnostic->release_vm))
+        { diagnostic->failures |= 1024; return 1; }
+    }
+    set_page_vprot(temporary->base, temporary->size, 0);
+    unregister_view(temporary); free_view(temporary);
+    return 0;
+}
+
+#define PEAR_FEX_BITMAP_VM_FORMAT \
+    "{\"mode\":%u,\"performed\":%s,\"calls\":%u,\"expected\":%d," \
+    "\"region_code\":%d,\"port_release_performed\":%s,\"port_release_code\":%d," \
+    "\"count\":%u,\"protection\":%u,\"maximum\":%u,\"predicate_failed\":%s}"
+#define PEAR_FEX_BITMAP_VM_ARGS(d) \
+    (d).mode, (d).performed?"true":"false", (d).calls, (d).expected, (d).region_code, \
+    (d).port_release_performed?"true":"false", (d).port_release_code, \
+    (d).count, (d).protection, (d).maximum, (d).predicate_failed?"true":"false"
+static void pear_fex_bitmap_diagnostic_report(const struct pear_fex_bitmap_diagnostic *d,
+                                             const struct pear_fex_memory_error *error)
+{
+    /* One bounded private row. Existing primary error and ten-field report
+     * remain independent; a logical mismatch has no invented native errno. */
+    fprintf(stderr, "PEAR_FEX_BITMAP_DIAGNOSTIC {\"schema_version\":1,"
+        "\"record_kind\":\"pear_fex_bitmap_diagnostic\",\"scope\":\"finite_wine_owner_bitmap_restoration\","
+        "\"failure_predicates\":%u,\"created_bitmap\":%s,\"bitmap_prepared\":%s,"
+        "\"page_count_performed\":%s,\"page_count\":%u,\"force_exec_prot\":%s,"
+        "\"original_bitmap_present\":%s,\"original_peb_bitmap_present\":%s,"
+        "\"first_page_performed\":%s,\"first_page\":%u,\"previous_vprot\":%u,\"current_vprot\":%u,"
+        "\"set_vprot_performed\":%s,\"set_vprot_succeeded\":%s,"
+        "\"release_performed\":%s,\"release_classification_performed\":%s,\"release_reserved\":%d,"
+        "\"release_arena_check_performed\":%s,\"release_arena_overlap\":%s,"
+        "\"release_method\":%u,\"release_native_performed\":%s,\"release_native_succeeded\":%s,"
+        "\"final_bitmap_equal\":%s,\"final_peb_equal\":%s,\"native_error_domain\":%u,\"native_error_code\":%d,"
+        "\"cleanup_vm\":" PEAR_FEX_BITMAP_VM_FORMAT ",\"page_vm\":" PEAR_FEX_BITMAP_VM_FORMAT
+        ",\"release_vm\":" PEAR_FEX_BITMAP_VM_FORMAT
+        ",\"fex_initialization\":false,\"translated_guest_execution\":false,\"game_execution\":false}\n",
+        d->failures, d->created_bitmap?"true":"false", d->bitmap_prepared?"true":"false",
+        d->page_count_performed?"true":"false", d->page_count, d->force_exec?"true":"false",
+        d->original_bitmap_present?"true":"false", d->original_peb_present?"true":"false",
+        d->first_page_performed?"true":"false", d->first_page, d->previous_vprot, d->current_vprot,
+        d->set_vprot_performed?"true":"false", d->set_vprot_succeeded?"true":"false",
+        d->release_performed?"true":"false", d->release_classification_performed?"true":"false", d->release_reserved,
+        d->release_arena_check_performed?"true":"false", d->release_arena_overlap?"true":"false",
+        d->release_method, d->release_native_performed?"true":"false", d->release_native_succeeded?"true":"false",
+        d->final_bitmap_equal?"true":"false", d->final_peb_equal?"true":"false", error->domain, error->code,
+        PEAR_FEX_BITMAP_VM_ARGS(d->cleanup_vm), PEAR_FEX_BITMAP_VM_ARGS(d->page_vm),
+        PEAR_FEX_BITMAP_VM_ARGS(d->release_vm));
+}
+#undef PEAR_FEX_BITMAP_VM_ARGS
+#undef PEAR_FEX_BITMAP_VM_FORMAT
+
+static NTSTATUS pear_fex_checked_bitmap_allocate(void)
+{
+    NTSTATUS status;
+    SIZE_T size;
+    if (!peb) return STATUS_NOT_SUPPORTED;
+    if (!arm64ec_view)
+    {
+        if ((ULONG_PTR)address_space_limit > ~(ULONG_PTR)0-page_size) return STATUS_INTEGER_OVERFLOW;
+        size = ((ULONG_PTR)address_space_limit+page_size) >> (page_shift+3);
+        size = ROUND_SIZE(0, size, host_page_mask);
+        status = map_view(&arm64ec_view, NULL, size, MEM_TOP_DOWN, VPROT_READ|VPROT_COMMITTED, 0, 0, 0);
+        if (status) return status;
+        peb->EcCodeBitMap = arm64ec_view->base;
+    }
+    return peb->EcCodeBitMap == arm64ec_view->base ? STATUS_SUCCESS : STATUS_INVALID_PARAMETER;
+}
+static int pear_fex_bitmap_bits(const void *base, SIZE_T size, BOOL expected)
+{
+    UINT64 *map = arm64ec_view->base;
+    size_t first = (size_t)base >> page_shift, last = ((size_t)base+size) >> page_shift, page;
+    for (page = first; page < last; ++page)
+        if (((map[page/64] >> (page&63)) & 1) != !!expected) return 0;
+    return 1;
+}
+
+/* A compile-selected source diagnostic toggles only an exact newly owned NONE
+ * view. It does not grant an EC caller role or qualify hybrid call dispatch. */
+/* This diagnostic is an explicit finite-suite operation, not an ordinary
+ * native shared-buffer allocation cost or an ARM64EC admission switch. */
+static NTSTATUS pear_register_ec_image(struct file_view *view, const struct pear_pe_image *image)
+{
+    IMAGE_ARM64EC_METADATA metadata;
+    struct pear_fex_memory_error error = {0};
+    SIZE_T start, end, bytes;
+    void *backing;
+    ULONG i;
+    NTSTATUS status;
+    if (view->pear_owned != 2 || image->role != PEAR_PE_ROLE_ARM64EC || !image->chpe_rva ||
+        host_page_size != 4096 || page_size != 4096) return STATUS_NOT_SUPPORTED;
+    if ((status = pear_fex_checked_bitmap_allocate())) return status;
+    if (peb->EcCodeBitMap != arm64ec_view->base) return STATUS_INVALID_PARAMETER;
+    start = ((SIZE_T)view->base >> page_shift) / 8;
+    end = (((SIZE_T)view->base + view->size) >> page_shift) / 8;
+    bytes = ROUND_SIZE(start, end + 1 - start, page_mask);
+    backing = ROUND_ADDR((char *)arm64ec_view->base + start, page_mask);
+    if ((char *)backing < (char *)arm64ec_view->base || bytes > arm64ec_view->size ||
+        (SIZE_T)((char *)backing - (char *)arm64ec_view->base) > arm64ec_view->size - bytes)
+        return STATUS_INVALID_IMAGE_FORMAT;
+    if (!set_vprot(arm64ec_view, backing, bytes, VPROT_READ|VPROT_WRITE|VPROT_COMMITTED) ||
+        pear_fex_bitmap_protection(backing, bytes, PROT_READ|PROT_WRITE, &error)) return STATUS_ACCESS_DENIED;
+    if (!pear_fex_bitmap_bits(view->base, view->size, FALSE)) return STATUS_INVALID_PARAMETER;
+    /* The staged parser validated this metadata and every referenced code range.
+     * Relocation has completed; metadata fields here are RVAs, not guest pointers. */
+    memset(&metadata, 0, sizeof(metadata));
+    memcpy(&metadata, (char *)view->base + image->chpe_rva,
+           offsetof(IMAGE_ARM64EC_METADATA, AuxiliaryIATCopy) + sizeof(ULONG));
+    view->protect |= VPROT_ARM64EC;
+    for (i = 0; i < metadata.CodeMapCount; ++i)
+    {
+        IMAGE_CHPE_RANGE_ENTRY range;
+        void *base;
+        SIZE_T size;
+        memcpy(&range, (char *)view->base + metadata.CodeMap + i * sizeof(range), sizeof(range));
+        if ((range.StartOffset & 3) != 1) continue;
+        base = (char *)view->base + (range.StartOffset & ~3u);
+        size = ROUND_SIZE(base, range.Length, page_mask);
+        base = ROUND_ADDR(base, page_mask);
+        set_arm64ec_range(base, size);
+        if (!pear_fex_bitmap_bits(base, size, TRUE))
+        {
+            clear_arm64ec_range(view->base, view->size);
+            if (!pear_fex_bitmap_bits(view->base, view->size, FALSE)) pear_pe_arena_fatal("EC image rollback");
+            view->protect &= ~VPROT_ARM64EC;
+            return STATUS_ACCESS_DENIED;
+        }
+    }
+    return STATUS_SUCCESS;
+}
+
+static int pear_fex_bitmap_diagnostics_selected(void)
+{
+    const char *value = getenv("PEAR_FEX_BITMAP_DIAGNOSTICS");
+    if (!value || !strcmp(value, "0")) return 0;
+    if (!strcmp(value, "1")) return 1;
+    return -1;
+}
+
+static int pear_fex_memory_bitmap_self_test(struct file_view *view,
+                                            struct pear_fex_memory_error *error)
+{
+    BYTE previous_vprot[32];
+    void *bitmap_base;
+    SIZE_T start, end, bitmap_size, pages, i;
+    unsigned int previous_flags = view->protect;
+    NTSTATUS status;
+    BOOL set_seen = FALSE, clear_seen = FALSE, restored = FALSE, none_before = FALSE, none_after = FALSE;
+    BOOL bitmap_prepared = FALSE, restoration_attempted = FALSE, actual_bitmap_seen = FALSE;
+    BOOL created_bitmap = !arm64ec_view;
+    struct file_view *previous_bitmap = arm64ec_view;
+    void *previous_peb_bitmap = peb ? peb->EcCodeBitMap : NULL;
+    struct pear_fex_memory_error restore_error = {0};
+    struct pear_fex_bitmap_diagnostic diagnostic = {0};
+    int result = 1;
+    diagnostic.created_bitmap = created_bitmap; diagnostic.force_exec = force_exec_prot;
+    diagnostic.original_bitmap_present = previous_bitmap != NULL;
+    diagnostic.original_peb_present = previous_peb_bitmap != NULL;
+    if (!pear_fex_fixture_enabled() || view->pear_owned != 4 || !view->size ||
+        view->size & page_mask || !peb || is_arm64ec() || host_page_size != 4096 || page_size != 4096) return 1;
+    none_before = pear_fex_bitmap_protection(view->base, view->size, PROT_NONE, error) == 0;
+    if (!none_before) goto report;
+    if ((status = pear_fex_checked_bitmap_allocate())) { pear_fex_nt_error(error, status); goto report; }
+    actual_bitmap_seen = peb->EcCodeBitMap == arm64ec_view->base;
+    start = ((size_t)view->base >> page_shift)/8;
+    end = (((size_t)view->base+view->size) >> page_shift)/8;
+    bitmap_size = ROUND_SIZE(start, end+1-start, page_mask);
+    bitmap_base = ROUND_ADDR((char *)arm64ec_view->base+start, page_mask);
+    if ((char *)bitmap_base < (char *)arm64ec_view->base ||
+        (SIZE_T)((char *)bitmap_base-(char *)arm64ec_view->base) > arm64ec_view->size ||
+        bitmap_size > arm64ec_view->size-(SIZE_T)((char *)bitmap_base-(char *)arm64ec_view->base)) goto report;
+    pages = bitmap_size/page_size;
+    diagnostic.page_count_performed = 1; diagnostic.page_count = pages;
+    if (!pages || pages > sizeof(previous_vprot)) goto report;
+    for (i = 0; i < pages; ++i) previous_vprot[i] = get_page_vprot((char *)bitmap_base+i*page_size);
+    errno = 0;
+    if (!set_vprot(arm64ec_view, bitmap_base, bitmap_size, VPROT_READ|VPROT_WRITE|VPROT_COMMITTED))
+    {
+        if (errno) { error->domain = PEAR_FEX_ERROR_ERRNO; error->code = errno; }
+        bitmap_prepared = TRUE; goto restore;
+    }
+    bitmap_prepared = TRUE;
+    if (pear_fex_bitmap_protection(bitmap_base, bitmap_size, PROT_READ|PROT_WRITE, error) ||
+        !pear_fex_bitmap_bits(view->base, view->size, FALSE)) goto restore;
+    view->protect |= VPROT_ARM64EC;
+    set_arm64ec_range(view->base, view->size);
+    set_seen = pear_fex_bitmap_bits(view->base, view->size, TRUE);
+    clear_arm64ec_range(view->base, view->size);
+    clear_seen = pear_fex_bitmap_bits(view->base, view->size, FALSE);
+ restore:
+    restoration_attempted = TRUE; restored = TRUE;
+    /* Clear before restoring readonly backing, including partial set failures.
+     * Only read/write observed bitmap backing may be touched. */
+    if (bitmap_prepared && !pear_fex_bitmap_observe(bitmap_base, bitmap_size, PROT_READ|PROT_WRITE, &restore_error,
+                                                   &diagnostic.cleanup_vm))
+    {
+        clear_arm64ec_range(view->base, view->size);
+        clear_seen = pear_fex_bitmap_bits(view->base, view->size, FALSE);
+    }
+    else { restored = FALSE; diagnostic.failures |= 1; }
+    view->protect = previous_flags;
+    if (bitmap_prepared)
+        for (i = 0; i < pages; ++i)
+        {
+            BYTE vprot = previous_vprot[i];
+            struct pear_fex_bitmap_vm_diagnostic page_diagnostic = {0};
+            BOOL page_set_succeeded, page_observed;
+            errno = 0;
+            page_set_succeeded = set_vprot(arm64ec_view, (char *)bitmap_base+i*page_size, page_size, vprot);
+            if (!page_set_succeeded)
+            {
+                restored = FALSE; diagnostic.failures |= 2;
+                if (!restore_error.domain && errno) { restore_error.domain = PEAR_FEX_ERROR_ERRNO; restore_error.code = errno; }
+            }
+            page_observed = !pear_fex_bitmap_observe((char *)bitmap_base+i*page_size, page_size,
+                get_unix_prot(vprot), &restore_error, &page_diagnostic);
+            if (!page_observed) { restored = FALSE; diagnostic.failures |= 4; }
+            if ((!page_set_succeeded || !page_observed) && !diagnostic.first_page_performed)
+            {
+                diagnostic.first_page_performed = 1; diagnostic.first_page = i;
+                diagnostic.previous_vprot = vprot;
+                diagnostic.current_vprot = get_page_vprot((char *)bitmap_base+i*page_size);
+                diagnostic.set_vprot_performed = 1; diagnostic.set_vprot_succeeded = page_set_succeeded;
+                diagnostic.page_vm = page_diagnostic;
+            }
+        }
+    none_after = pear_fex_bitmap_protection(view->base, view->size, PROT_NONE, &restore_error) == 0;
+    if (!none_after || view->protect != previous_flags || peb->EcCodeBitMap != arm64ec_view->base) restored = FALSE;
+    if (none_after && view->protect != previous_flags) diagnostic.failures |= 8;
+    if (none_after && view->protect == previous_flags && peb->EcCodeBitMap != arm64ec_view->base) diagnostic.failures |= 16;
+    if (!error->domain && restore_error.domain) *error = restore_error;
+ report:
+    /* The compile-selected native diagnostic owns a newly created temporary
+     * bitmap; restore the original PEB/view lifetime on every exit. Existing
+     * source bitmap users are never deleted or replaced. */
+    if (created_bitmap && arm64ec_view)
+    {
+        struct file_view *temporary = arm64ec_view;
+        restoration_attempted = TRUE;
+        struct pear_fex_memory_error lifetime_error = {0};
+        if (pear_fex_bitmap_release(temporary, &lifetime_error, &diagnostic))
+        {
+            restored = FALSE;
+            if (!error->domain && lifetime_error.domain) *error = lifetime_error;
+        }
+        else
+        {
+            arm64ec_view = previous_bitmap; peb->EcCodeBitMap = previous_peb_bitmap;
+        }
+    }
+    if (arm64ec_view != previous_bitmap || peb->EcCodeBitMap != previous_peb_bitmap) restored = FALSE;
+    diagnostic.final_bitmap_equal = arm64ec_view == previous_bitmap;
+    diagnostic.final_peb_equal = peb->EcCodeBitMap == previous_peb_bitmap;
+    if (!diagnostic.final_bitmap_equal) diagnostic.failures |= 2048;
+    if (!diagnostic.final_peb_equal) diagnostic.failures |= 4096;
+    diagnostic.bitmap_prepared = bitmap_prepared;
+    result = !(set_seen && clear_seen && restored && none_before && none_after);
+    if (!restored) atomic_store_explicit(&pear_fex_wine_quarantined, 1, memory_order_release);
+    pear_fex_bitmap_diagnostic_report(&diagnostic, error);
+    fprintf(stderr, "PEAR_FEX_BITMAP {\"set_observed\":%s,\"clear_observed\":%s,\"restoration_observed\":%s,"
+        "\"none_before\":%s,\"none_after\":%s,\"actual_peb_bitmap\":%s,\"restoration_attempted\":%s,\"hybrid_classification\":false,"
+        "\"error_domain\":%u,\"error_code\":%d}\n",
+        set_seen?"true":"false", clear_seen?"true":"false", restored?"true":"false",
+        none_before?"true":"false", none_after?"true":"false",
+        actual_bitmap_seen?"true":"false", restoration_attempted?"true":"false", error->domain, error->code);
+    return result;
+}
+#endif
+
+/* Called under the owner gate, then virtual_mutex: never invert that order. */
+static int pear_fex_wine_ec_register(uint64_t offset, uint64_t size, int publish,
+                                     struct pear_fex_memory_error *error)
+{
+    struct pear_fex_view_record *record;
+    struct file_view *view;
+    void *base, *bitmap_base;
+    SIZE_T first, last, bitmap_size;
+    sigset_t sigset;
+    NTSTATUS status;
+    int result = 1;
+    memset(error, 0, sizeof(*error));
+    server_enter_uninterrupted_section(&virtual_mutex, &sigset);
+    if (!is_arm64ec() || !pear_fex_wine_backing.private_base ||
+        pear_fex_wine_backing.owner_pid != (uint64_t)getpid() || !size ||
+        ((offset | size) & page_mask) || offset > PEAR_ARENA_MAPPING_BYTES ||
+        size > PEAR_ARENA_MAPPING_BYTES - offset) goto invalid;
+    base = (char *)(uintptr_t)pear_fex_wine_backing.private_base + offset;
+    record = pear_fex_view_at(base, size);
+    view = find_view(base, size);
+    if (!record || record->role != PEAR_FEX_ROLE_ARM64EC || !view || view->pear_owned != 4 ||
+        view->pear_generation != record->generation || view->base != record->base ||
+        view->size != record->size) goto invalid;
+    if ((status = pear_fex_checked_bitmap_allocate()))
+    { pear_fex_nt_error(error, status); goto done; }
+    first = ((SIZE_T)base >> page_shift) / 8;
+    last = (((SIZE_T)base + size - 1) >> page_shift) / 8;
+    bitmap_size = ROUND_SIZE(first, last + 1 - first, page_mask);
+    bitmap_base = ROUND_ADDR((char *)arm64ec_view->base + first, page_mask);
+    if ((char *)bitmap_base < (char *)arm64ec_view->base || bitmap_size > arm64ec_view->size ||
+        (SIZE_T)((char *)bitmap_base - (char *)arm64ec_view->base) > arm64ec_view->size - bitmap_size)
+        goto invalid;
+    if (!set_vprot(arm64ec_view, bitmap_base, bitmap_size, VPROT_READ|VPROT_WRITE|VPROT_COMMITTED) ||
+        pear_fex_bitmap_protection(bitmap_base, bitmap_size, PROT_READ|PROT_WRITE, error)) goto done;
+    if (publish)
+    {
+        if (pear_fex_backing_query(offset, size, PEAR_FEX_PROTECTION_RX, error)) goto done;
+        set_arm64ec_range(base, size);
+    }
+    else clear_arm64ec_range(base, size);
+    if (!pear_fex_bitmap_bits(base, size, publish)) goto invalid;
+    result = 0;
+    goto done;
+ invalid:
+    pear_fex_nt_error(error, STATUS_INVALID_PARAMETER);
+ done:
+    if (result && !error->domain) pear_fex_nt_error(error, STATUS_ACCESS_DENIED);
+    server_leave_uninterrupted_section(&virtual_mutex, &sigset);
+    return result;
+}
+static int pear_fex_wine_role(uint32_t role);
+
+static int pear_fex_wine_view(uint64_t offset, uint64_t size, uint64_t id, uint64_t generation,
+                               uint32_t allocation_class, uint32_t role, int reserve,
+                               struct pear_fex_memory_error *error)
+{
+    struct pear_fex_memory_backing backing;
+    struct pear_fex_view_record *record = NULL;
+    struct file_view *view;
+    sigset_t sigset;
+    void *base;
+    NTSTATUS status;
+    unsigned int i;
+    int result = 1;
+#if defined(__APPLE__) && defined(__aarch64__) && defined(PEAR_FEX_MEMORY_FINITE_FIXTURE)
+    int bitmap_diagnostics = 0;
+#endif
+    memset(error, 0, sizeof(*error));
+    server_enter_uninterrupted_section(&virtual_mutex, &sigset);
+    backing = pear_fex_wine_backing;
+    if (!backing.private_base || backing.owner_pid != (uint64_t)getpid()) goto done;
+    base = (char *)(uintptr_t)backing.private_base+offset;
+    if (!id || !generation || !size || !pear_fex_wine_role(role) || (allocation_class != PEAR_FEX_CLASS_SHARED &&
+        allocation_class != PEAR_FEX_CLASS_DISPATCHER)) goto done;
+#if defined(__APPLE__) && defined(__aarch64__) && defined(PEAR_FEX_MEMORY_FINITE_FIXTURE)
+    if (reserve && allocation_class == PEAR_FEX_CLASS_SHARED)
+    {
+        bitmap_diagnostics = pear_fex_bitmap_diagnostics_selected();
+        if (bitmap_diagnostics < 0) goto done;
+    }
+#endif
+    if (reserve)
+    {
+        uint64_t available;
+        /* Splitting an existing owned view needs at most two spare records.
+         * Keep observation and both allocations under this same mutex. */
+        if (pear_fex_available_views(&available))
+        { pear_fex_nt_error(error, STATUS_INVALID_PARAMETER); goto done; }
+        if (available < 2)
+        { pear_fex_nt_error(error, STATUS_NO_MEMORY); goto done; }
+        for (i = 0; i < PEAR_FEX_MEMORY_MAX_EXTENTS; ++i) if (!pear_fex_views[i].id) break;
+        if (i == PEAR_FEX_MEMORY_MAX_EXTENTS || pear_fex_view_at(base, size)) goto done;
+        if ((status = pear_create_owned_view(&view, base, size))) { pear_fex_nt_error(error, status); goto done; }
+        record = &pear_fex_views[i];
+        *record = (struct pear_fex_view_record){base, size, id, generation, allocation_class, role};
+        view->pear_owned = 4; view->pear_generation = generation; view->protect = 0;
+        set_page_vprot(base, size, 0);
+#if defined(__APPLE__) && defined(__aarch64__) && defined(PEAR_FEX_MEMORY_FINITE_FIXTURE)
+        if (allocation_class == PEAR_FEX_CLASS_SHARED && bitmap_diagnostics &&
+            pear_fex_memory_bitmap_self_test(view, error))
+        {
+            if (!atomic_load_explicit(&pear_fex_wine_quarantined, memory_order_acquire)) { pear_release_owned_view(view); memset(record, 0, sizeof(*record)); }
+            goto done;
+        }
+#endif
+    }
+    else
+    {
+        record = pear_fex_view_at(base, size);
+        view = find_view(base, size);
+        if (!record || record->base != base || record->size != size || record->id != id ||
+            record->generation != generation || record->allocation_class != allocation_class || record->role != role ||
+            !view || view->pear_owned != 4 || view->base != base || view->size != size || view->pear_generation != generation ||
+            pear_fex_backing_query(offset, size, PEAR_FEX_PROTECTION_NONE, error)) goto done;
+        pear_release_owned_view(view); memset(record, 0, sizeof(*record));
+    }
+    result = 0;
+ done:
+    server_leave_uninterrupted_section(&virtual_mutex, &sigset);
+    return result;
+}
+static int pear_fex_wine_role(uint32_t role)
+{
+    /* Caller identity is checked by the private PE thunk, using Wine's selected
+     * pinned translator. Unix additionally checks the actual process role. */
+    return (is_arm64ec() && role == PEAR_FEX_ROLE_ARM64EC) ||
+           (!is_arm64ec() && pear_fex_fixture_enabled() && role == PEAR_FEX_ROLE_NATIVE);
+}
+static int pear_fex_wine_entry(uint64_t offset, uint64_t usable_size, uint64_t entry_offset,
+                                uint32_t allocation_class, uint32_t role)
+{
+    (void)offset;
+    if (is_arm64ec() && role == PEAR_FEX_ROLE_ARM64EC)
+        return (allocation_class == PEAR_FEX_CLASS_SHARED || allocation_class == PEAR_FEX_CLASS_DISPATCHER) &&
+               !(entry_offset & 3) && entry_offset <= usable_size && 4 <= usable_size-entry_offset;
+    /* The finite fixture alone admits exact source-owned leaf entry positions.
+     * General FEX lookup/entry metadata must be paired before runtime use. */
+    return pear_fex_fixture_enabled() && role == PEAR_FEX_ROLE_NATIVE &&
+           (allocation_class == PEAR_FEX_CLASS_SHARED || allocation_class == PEAR_FEX_CLASS_DISPATCHER) &&
+           (entry_offset == 0 || entry_offset == 4096) && entry_offset <= usable_size && 4 <= usable_size-entry_offset;
+}
+NTSTATUS pear_fex_memory_unix_entry(void *opaque)
+{
+    struct pear_fex_memory_call *call = opaque;
+    const struct pear_fex_memory_backend backend = {pear_fex_wine_initialize, pear_fex_wine_query,
+        pear_fex_wine_protect, pear_fex_wine_ec_register, pear_fex_wine_view, pear_fex_wine_role, pear_fex_wine_entry, pear_fex_wine_metadata};
+    struct pear_fex_memory_error error = {0};
+    uint32_t status;
+    if (!call) return STATUS_INVALID_PARAMETER;
+    if (atomic_load_explicit(&pear_fex_wine_quarantined, memory_order_acquire))
+    {
+        memset(&call->response, 0, sizeof(call->response));
+        call->response.version = PEAR_FEX_MEMORY_VERSION; call->response.size = sizeof(call->response);
+        call->response.status = PEAR_FEX_QUARANTINED;
+        return STATUS_SUCCESS;
+    }
+    if (call->request.owner_pid != (uint64_t)getpid())
+    {
+        memset(&call->response, 0, sizeof(call->response));
+        call->response.version = PEAR_FEX_MEMORY_VERSION; call->response.size = sizeof(call->response);
+        call->response.status = PEAR_FEX_STALE_IDENTITY;
+        return STATUS_SUCCESS;
+    }
+    /* Pure record checks precede MAP_JIT construction. */
+    status = pear_fex_memory_dispatch(&call->request, &call->response);
+    if (status != PEAR_FEX_UNAVAILABLE) return STATUS_SUCCESS;
+    if (!pear_fex_wine_role(call->request.ec_role) ||
+        (call->request.opcode != PEAR_FEX_RESERVE && call->request.opcode != PEAR_FEX_EXECUTOR_REGISTER))
+        return STATUS_SUCCESS;
+    if ((status = pear_fex_memory_initialize(&backend, &error)))
+    {
+        memset(&call->response, 0, sizeof(call->response));
+        call->response.version = PEAR_FEX_MEMORY_VERSION; call->response.size = sizeof(call->response);
+        call->response.status = status; call->response.native_error_domain = error.domain;
+        call->response.native_error_code = error.code;
+    }
+    else pear_fex_memory_dispatch(&call->request, &call->response);
+    return STATUS_SUCCESS;
+}

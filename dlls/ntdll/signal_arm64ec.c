@@ -221,6 +221,8 @@ NTSTATUS arm64ec_process_init( HMODULE module )
     info->EmulatedMachineType = IMAGE_FILE_MACHINE_AMD64;
     memcpy( KiUserExceptionDispatcher_orig, KiUserExceptionDispatcher_thunk, sizeof(KiUserExceptionDispatcher_orig) );
 
+    /* The selected module is the sole private owner caller for this process. */
+    if ((status = pear_fex_bind_module(module))) return status;
     enter_syscall_callback();
     if (pProcessInit) status = pProcessInit();
     if (!status)

@@ -25,6 +25,7 @@
 #import "cocoa_cursorclipping.h"
 #import "cocoa_event.h"
 #import "cocoa_window.h"
+#include "stage5_protocol.h"
 
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 
@@ -1833,6 +1834,9 @@ static NSString* WineLocalizedString(unsigned int stringID)
     {
         NSEventType type = [anEvent type];
 
+        if (type == NSEventTypeApplicationDefined && [anEvent subtype] == PEAR_STAGE5_WAKE_SUBTYPE)
+            pear_stage5_window_wake_consumed([anEvent subtype], [anEvent data1], [anEvent data2], [anEvent windowNumber]);
+
         if (type == NSEventTypeKeyDown && ![anEvent isARepeat] && [anEvent keyCode] == kVK_Tab)
         {
             NSUInteger modifiers = [anEvent modifierFlags];
@@ -1882,6 +1886,7 @@ static NSString* WineLocalizedString(unsigned int stringID)
                 });
             }
             [windowsBeingDragged removeObject:window];
+            pear_stage5_window_diagnostic_closed(window);
         }];
 
         [nc addObserverForName:NSWindowWillStartDraggingNotification
@@ -2326,6 +2331,58 @@ static NSString* WineLocalizedString(unsigned int stringID)
     {
         [self adjustWindowLevels:NO];
     }
+
+/* Fixture-only event-turn advancement, reusing macdrv_set_query_done's ordinary
+ * application-defined, windowless wake pattern. The observer controls the bound. */
+int pear_stage5_post_wake(uint64_t payload)
+{
+@autoreleasepool
+{
+    NSEvent *event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                                       location:NSZeroPoint
+                                  modifierFlags:0
+                                      timestamp:[[NSProcessInfo processInfo] systemUptime]
+                                   windowNumber:0 context:nil subtype:PEAR_STAGE5_WAKE_SUBTYPE
+                                          data1:PEAR_STAGE5_WAKE_TAG data2:payload];
+    if (!event) return 0;
+    [NSApp postEvent:event atStart:TRUE];
+    return 1;
+}
+}
+
+/* Diagnostic-only scalar identity observations. No explicit target retain or
+ * dereference is added. AppKit's returned window array has temporary ownership
+ * bounded by this pool; its objects are not retained beyond this helper. */
+void pear_stage5_diag_app(uintptr_t target, struct pear_s5_diag_snapshot *out)
+{
+@autoreleasepool
+{
+    WineApplicationController *controller = [WineApplicationController sharedController];
+    NSArray *windows = [NSApp windows];
+    NSEvent *current = [NSApp currentEvent];
+
+    out->main_thread = !!pthread_main_np();
+    out->app_windows = [windows count];
+    out->app_target = 0;
+    for (NSWindow *window in windows)
+        if ((uintptr_t)window == target) out->app_target++;
+    out->key_windows = [controller->keyWindows count];
+    out->key_target = 0;
+    for (NSWindow *window in controller->keyWindows)
+        if ((uintptr_t)window == target) out->key_target++;
+    out->dragged_windows = [controller->windowsBeingDragged count];
+    out->dragged_target = 0;
+    for (NSWindow *window in controller->windowsBeingDragged)
+        if ((uintptr_t)window == target) out->dragged_target++;
+    out->capture_target = (uintptr_t)controller->mouseCaptureWindow == target;
+    out->last_mouse_target = (uintptr_t)controller->lastTargetWindow == target;
+    out->app_event_type = current ? [current type] : 0;
+    out->app_event_target = current && (uintptr_t)[current window] == target;
+    dispatch_sync(controller->requestsManipQueue, ^{
+        out->pending_main_requests = [controller->requests count];
+    });
+}
+}
 
 /***********************************************************************
  *              PerformRequest

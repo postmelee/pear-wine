@@ -1,0 +1,1969 @@
+{
+  "schema_version": 1,
+  "component": "pear-wine",
+  "layer": "accepted",
+  "upstream": {
+    "url": "https://github.com/wine-mirror/wine.git",
+    "commit": "4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf",
+    "tree": "10b47b2965a7b3e1e9694ec506a3d13525211892"
+  },
+  "selected_files": [
+    {
+      "path": "configure",
+      "mode": "100755",
+      "size_bytes": 745684,
+      "sha256": "acf2d62208f396208ed812cf7b27246685a541410ec98f1ef89102bc3bb1e217"
+    },
+    {
+      "path": "configure.ac",
+      "mode": "100644",
+      "size_bytes": 154066,
+      "sha256": "c7e40ccb0a8a61c5d940c2c9c43ca37a091eaf38a2faed19a043e0be7d292ec7"
+    },
+    {
+      "path": "dlls/ntdll/Makefile.in",
+      "mode": "100644",
+      "size_bytes": 1818,
+      "sha256": "31cc3f52a7d258e88d19b42a014bdbb4fd102ff057e5d8d5424d6fa7281ca139"
+    },
+    {
+      "path": "dlls/ntdll/loader.c",
+      "mode": "100644",
+      "size_bytes": 180134,
+      "sha256": "1f9e4b5ae2192d60230f7c14c429ae9652ed153f66ebcbcfc576d705f0cb0230"
+    },
+    {
+      "path": "dlls/ntdll/ntdll.spec",
+      "mode": "100644",
+      "size_bytes": 88253,
+      "sha256": "73981dd70ec38f032d7d54bb0f91d5142c57e103f287ed2bed242930658e362e"
+    },
+    {
+      "path": "dlls/ntdll/ntdll_misc.h",
+      "mode": "100644",
+      "size_bytes": 8522,
+      "sha256": "31244a2730f977c1228dfcbac4e2e611ec30b31c069ccf71af87a2e2e55f6ed8"
+    },
+    {
+      "path": "dlls/ntdll/pear_fex_memory.c",
+      "mode": "100644",
+      "size_bytes": 7017,
+      "sha256": "99050d8e45e52f93ef05180ed6c41e43adba7f9d1e273eafbcabda7dbe2beb6f"
+    },
+    {
+      "path": "dlls/ntdll/signal_arm64ec.c",
+      "mode": "100644",
+      "size_bytes": 108332,
+      "sha256": "f740d06191d762008e0a926339a054e032e8b2b89b4ceb7772471c6b7514e010"
+    },
+    {
+      "path": "dlls/ntdll/unix/env.c",
+      "mode": "100644",
+      "size_bytes": 86446,
+      "sha256": "a02b358df08d35526124a415ab0f875de311f8987e5ef8c386fabd69fa749d40"
+    },
+    {
+      "path": "dlls/ntdll/unix/loader.c",
+      "mode": "100644",
+      "size_bytes": 81036,
+      "sha256": "cec2d1a1e00131a02750046bea52a7931a5ee3bf8e470a7b22dea763e72172cc"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_abi_fixture.c",
+      "mode": "100644",
+      "size_bytes": 6104,
+      "sha256": "80836d204a101c52f2921212f015ffe5089b8e06a8303b31d8b27b268ebd027c"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_fex_memory.c",
+      "mode": "100644",
+      "size_bytes": 41376,
+      "sha256": "c53f9a2bafe5d9cced3bcc6e1cda8f195175e68f2d2adb04c902a2d77dd72e2b"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_fex_memory_private.h",
+      "mode": "100644",
+      "size_bytes": 2979,
+      "sha256": "6deec3f8deecfffe6d39f418fead96706483abaafda60d37405b262fa102e1c3"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_pe_arena.c",
+      "mode": "100644",
+      "size_bytes": 71063,
+      "sha256": "4b91a66df05791bba2d454dd5c3c2131a3dffea339f9608db29c9ed68457d6de"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_pe_arena.h",
+      "mode": "100644",
+      "size_bytes": 3978,
+      "sha256": "dccb37fd2f3506ac95539f8c084860f426b338976862e734b6e307df87a228a3"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_signal_fixture.c",
+      "mode": "100644",
+      "size_bytes": 16590,
+      "sha256": "cadae5facb0185304e55daf363c8b1efd59d3a4969ca8908ab4b7d8a3c77b4f7"
+    },
+    {
+      "path": "dlls/ntdll/unix/process.c",
+      "mode": "100644",
+      "size_bytes": 66903,
+      "sha256": "ade5a827d570e305efec238108ff3a178ea8d231592564073dc5d51dec85f050"
+    },
+    {
+      "path": "dlls/ntdll/unix/server.c",
+      "mode": "100644",
+      "size_bytes": 69709,
+      "sha256": "14b0d54d74a7c992ceebeb57c2fec2b05ca53bfa8b9ef698b126d06d77c76617"
+    },
+    {
+      "path": "dlls/ntdll/unix/signal_arm64.c",
+      "mode": "100644",
+      "size_bytes": 96157,
+      "sha256": "ed61e67b9b8789a2c0632ce0a5475c89a8a3bc4d853a405b346aa2c2f35716a9"
+    },
+    {
+      "path": "dlls/ntdll/unix/stage4_protocol.h",
+      "mode": "100644",
+      "size_bytes": 2431,
+      "sha256": "fed6aec99834a1960e3a4ef4e116879fb64a0d7b019d84300c7cd82022635555"
+    },
+    {
+      "path": "dlls/ntdll/unix/thread.c",
+      "mode": "100644",
+      "size_bytes": 102831,
+      "sha256": "8ad51c83cfab8a30c844a9e90032e3cd89092e1c4b56ca80ed18908709192b24"
+    },
+    {
+      "path": "dlls/ntdll/unix/virtual.c",
+      "mode": "100644",
+      "size_bytes": 306842,
+      "sha256": "624b909228b6e3329355b0d8cde2a60bd98c6fa84f7f2cc2d59a0118e05d15f4"
+    },
+    {
+      "path": "dlls/ntdll/unixlib.h",
+      "mode": "100644",
+      "size_bytes": 2153,
+      "sha256": "2815e818d5fa34a5de251fec58899048da6440caef9b12a939dd6d35c82a25ff"
+    },
+    {
+      "path": "dlls/win32u/window.c",
+      "mode": "100644",
+      "size_bytes": 220657,
+      "sha256": "29ffaf427dd689b4ecc43a086f71a3adfb8954c845d3b255701ec1d824abd373"
+    },
+    {
+      "path": "dlls/winemac.drv/Makefile.in",
+      "mode": "100644",
+      "size_bytes": 891,
+      "sha256": "ecddb1449e51f8345e5cae78b764f7bb116054f027e95f2426ff655f24f0fa4a"
+    },
+    {
+      "path": "dlls/winemac.drv/cocoa_app.m",
+      "mode": "100644",
+      "size_bytes": 103890,
+      "sha256": "05037cecb2278e45fe24576f2720e6343b8ba1ec255f414761040d5270955ddf"
+    },
+    {
+      "path": "dlls/winemac.drv/cocoa_event.m",
+      "mode": "100644",
+      "size_bytes": 26302,
+      "sha256": "bd6caaf1d052164586d3fc643aca199392016b1bb11d963a12c6e7572762a438"
+    },
+    {
+      "path": "dlls/winemac.drv/cocoa_main.m",
+      "mode": "100644",
+      "size_bytes": 7623,
+      "sha256": "59c0daf5029b053d63ad23b55932382aed282b1d7a5571ebb196c27231c7492a"
+    },
+    {
+      "path": "dlls/winemac.drv/cocoa_window.m",
+      "mode": "100644",
+      "size_bytes": 138516,
+      "sha256": "287724940e792c7af070135aad4ce8663a4ae02bf54be26969f5279a8a7522c0"
+    },
+    {
+      "path": "dlls/winemac.drv/event.c",
+      "mode": "100644",
+      "size_bytes": 16819,
+      "sha256": "4e1f356dfee936496e88526bd806ad29c10447005073869dabf484673b9f7174"
+    },
+    {
+      "path": "dlls/winemac.drv/macdrv.h",
+      "mode": "100644",
+      "size_bytes": 16763,
+      "sha256": "c1ab92b1ef140b82ce71442d8c8a7c6fe73530db6688976f262fc3414233b9ec"
+    },
+    {
+      "path": "dlls/winemac.drv/macdrv_main.c",
+      "mode": "100644",
+      "size_bytes": 20829,
+      "sha256": "f3f5d3a5d39b9526be82106065e3ac1e722757802006485451bea6d11c20ba67"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_dxmt/winemetal.h",
+      "mode": "100644",
+      "size_bytes": 64158,
+      "sha256": "0602671b1a3dd3994dfa12492ec1dfb4001e02534f2b7429949eea840ec8940c"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_dxmt/winemetal_thunks.h",
+      "mode": "100644",
+      "size_bytes": 9125,
+      "sha256": "c424046b565f99e0b99cf8aa95c28008c64d5812dd1c0d6d15753aab76445215"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_macdrv_metal_v1.h",
+      "mode": "100644",
+      "size_bytes": 1684,
+      "sha256": "7a19ce6b49c19ab7603ff875d6e9d92ababa92dd1202fb3c912f02c2f6e5275d"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_macdrv_metal_v2.h",
+      "mode": "100644",
+      "size_bytes": 925,
+      "sha256": "c2da86219c1c90939339c39086b24d68a86d672cf72f239a88df3ac402be0eb9"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_metal_bridge.m",
+      "mode": "100644",
+      "size_bytes": 11635,
+      "sha256": "5f76acbd41a0f7bf7005972ee086644de34045632d509e554c2b18bb17affded"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_metal_control.c",
+      "mode": "100644",
+      "size_bytes": 340,
+      "sha256": "b3b7838d7aa1e5728dfc568ab1b7f73edf95b0e199491ce24fd2bd4dbd19432c"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_metal_pairing.m",
+      "mode": "100644",
+      "size_bytes": 19558,
+      "sha256": "dca814eb250212bf3e0983baba7aac63edf4d55000938ca07e122e7e7d948eb4"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_metal_protocol.h",
+      "mode": "100644",
+      "size_bytes": 721,
+      "sha256": "64354b4685d66a22e7c565b20f30a1386bfa7e22c0220de9219ff78a9dbece91"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_surface_owner.h",
+      "mode": "100644",
+      "size_bytes": 5710,
+      "sha256": "6301219112fe68265815f7c0565602b6baedf55525b6f9d5486ccbc7468958c1"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_window_control.c",
+      "mode": "100644",
+      "size_bytes": 316,
+      "sha256": "2cb1c0da0f9eac5f1d8c63a24ed74a2e6ed0f37d6f8fdf0c5d718afece057a44"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_window_fixture.m",
+      "mode": "100644",
+      "size_bytes": 28452,
+      "sha256": "34124c67632916b0f9ef5437a3c8e874deec32ee242903c85ffade688cb00ed1"
+    },
+    {
+      "path": "dlls/winemac.drv/stage5_census.h",
+      "mode": "100644",
+      "size_bytes": 6853,
+      "sha256": "2abc01e678e964c7d45c097f73ad6c2714ac65ae5c1e18453bf97d35786dd226"
+    },
+    {
+      "path": "dlls/winemac.drv/stage5_protocol.h",
+      "mode": "100644",
+      "size_bytes": 3728,
+      "sha256": "bb2990f08bdf693b9223a7d1271723c2915fa87dface3fe39e8771c6f93201e5"
+    },
+    {
+      "path": "dlls/winemac.drv/unixlib.h",
+      "mode": "100644",
+      "size_bytes": 1823,
+      "sha256": "54bcf19a48355409cb8c770bdab0a011914aef8195c37a14d8aeba46b0f99bdc"
+    },
+    {
+      "path": "dlls/winemac.drv/window.c",
+      "mode": "100644",
+      "size_bytes": 73092,
+      "sha256": "6477b9b73f433bb5c5435713940c95e933473d9f0145f7250b6297363294513d"
+    },
+    {
+      "path": "dlls/winemac.drv/winemac.drv.spec",
+      "mode": "100644",
+      "size_bytes": 72,
+      "sha256": "593d9d7e1ed438a7b6352b9e0c0fedd102037f927a4ce52d980b4a737daef1a5"
+    },
+    {
+      "path": "include/Makefile.in",
+      "mode": "100644",
+      "size_bytes": 22138,
+      "sha256": "7b0dd9c2957aacb944185e7ac039c990b25bd4fbf6718e4ab01e7b1051724b53"
+    },
+    {
+      "path": "include/wine/pear_bootstrap.h",
+      "mode": "100644",
+      "size_bytes": 12416,
+      "sha256": "c3844ad60ea81c96952bc1abdad4328ef25973d6ac80179992358a281018b299"
+    },
+    {
+      "path": "include/wine/pear_fex_memory.h",
+      "mode": "100644",
+      "size_bytes": 8507,
+      "sha256": "a089b475fe6d6f2401977319eb4f0702e85c0753063f5748093131088f9f8b55"
+    },
+    {
+      "path": "include/wine/pear_stage3.h",
+      "mode": "100644",
+      "size_bytes": 6724,
+      "sha256": "2523601a29896a098049128c91a56381fff297403626d8a93bff0fc6021a859e"
+    },
+    {
+      "path": "loader/main.c",
+      "mode": "100644",
+      "size_bytes": 6613,
+      "sha256": "75824fbfbdce2adceefc736cad1de70d1fa01bf38e7f695a5dff4da64ee04617"
+    },
+    {
+      "path": "server/Makefile.in",
+      "mode": "100644",
+      "size_bytes": 901,
+      "sha256": "1db7fadbda0e66a1f9f600d66bef1b85f28f38e9a80f3b9e7120ccd753dc3240"
+    },
+    {
+      "path": "server/main.c",
+      "mode": "100644",
+      "size_bytes": 7896,
+      "sha256": "bb024e4d41b68427782d2bf85420f258bd2358ea7e06aa261c9803674eab3acb"
+    },
+    {
+      "path": "server/registry.c",
+      "mode": "100644",
+      "size_bytes": 75803,
+      "sha256": "c93b57df78d5394952baf227efb0beb3f6be375fdbb1cf94837758b9b45d98b1"
+    },
+    {
+      "path": "server/thread.c",
+      "mode": "100644",
+      "size_bytes": 79505,
+      "sha256": "56b3493c9e65fc52af26a910fb207553286888f120452b98148f74b1c1e12fe7"
+    }
+  ],
+  "patch_provenance": [
+    {
+      "legacy_path": "runtime/wine/patches/0001-darwin-loader-layout.patch",
+      "sha256": "3b209274fb06a5de8741704e4a805dcf4af58cbbe97f58ad041f4bf6e4b1b906",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "5c948a6f567a978906458b290da6b5b820d20414",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 1,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "configure",
+          "before_sha256": "a90ab06be75afd7d18102240f00db01f8350f922f8dbdac7ce793213a598207d",
+          "after_sha256": "4da8b4089c966e0e359979eedb7791cb20fb020c808551500778732468729d63",
+          "size_bytes": 745003,
+          "mode": "100755"
+        },
+        {
+          "path": "configure.ac",
+          "before_sha256": "c5ab2e0580741f0fc6193ba612da01cb38ac4a0395e87a37c875039e8c04554d",
+          "after_sha256": "802bf17c6379a6ce33f8d4760131ecf2d400a1db78612b117f288986a63d5452",
+          "size_bytes": 153392,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "b4adcaab240ecca26305f212894597b6250a253f181f0861ba67e7a3376d24fa",
+          "after_sha256": "379d2c9c63c70df6df08f2fb098d5d38b8de472cbf4c283093e26be06a91ade7",
+          "size_bytes": 71986,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration additions only)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0002-native-bootstrap-evidence.patch",
+      "sha256": "a01bb82c05c07be9d9d00a6aa41572e5124f6244e1b3b7a0e62cecc4355daa87",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "5c948a6f567a978906458b290da6b5b820d20414",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 2,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "include/Makefile.in",
+          "before_sha256": "e7913f6a34f349ddcec74cd484b6c2482aff82b224b07d127c0bf8d82ab72ad5",
+          "after_sha256": "96acfdb329de863f4e7147267eeaeafbb19804981cebfdd7ea1a5ac646b85515",
+          "size_bytes": 22090,
+          "mode": "100644"
+        },
+        {
+          "path": "include/wine/pear_bootstrap.h",
+          "before_sha256": null,
+          "after_sha256": "198535e51a025f04cb05ae1085a94c6cc4582d7dc4da333d44b63e1ade81b788",
+          "size_bytes": 12030,
+          "mode": "100644"
+        },
+        {
+          "path": "loader/main.c",
+          "before_sha256": "ab7df8fbca3308fba27b7f3e081526ca772ec81b39733d1b16f4374ef720e857",
+          "after_sha256": "02114af0c8d395f87cfc54aa414396d52f921db1a2b65d0b2c4283cc06361302",
+          "size_bytes": 5778,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "379d2c9c63c70df6df08f2fb098d5d38b8de472cbf4c283093e26be06a91ade7",
+          "after_sha256": "7d83fa8aa26cbc63c9a08de2cb1c62b7b1a66014cb1f2bd4c871681b1854c24b",
+          "size_bytes": 73320,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/server.c",
+          "before_sha256": "5b9a9e2973b014c0438a4c9b8f9cc301a4c6ac5b29007a7070d33a23fc902cad",
+          "after_sha256": "23c0d22d373cd1825340d725232e5a4521f65aa3abece16fc312553bf2f9a4a7",
+          "size_bytes": 69554,
+          "mode": "100644"
+        },
+        {
+          "path": "server/main.c",
+          "before_sha256": "441ea40e39b63907f970504f3071bbf1ba747c89b5189ffe478b6b3b55755af7",
+          "after_sha256": "bb024e4d41b68427782d2bf85420f258bd2358ea7e06aa261c9803674eab3acb",
+          "size_bytes": 7896,
+          "mode": "100644"
+        },
+        {
+          "path": "server/thread.c",
+          "before_sha256": "05f7f35fe124e6fc6e810bdd18282a3463d4efc09fd4d37bb0eb7e3b1e4f2d9f",
+          "after_sha256": "56b3493c9e65fc52af26a910fb207553286888f120452b98148f74b1c1e12fe7",
+          "size_bytes": 79505,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration additions only)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003-darwin-x18-transitions.patch",
+      "sha256": "d9a812c69050850a502a0e9e688fbede6ae7047ce6ad597a266d631c4b7c712c",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 3,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "1bcecb9f809ba14c95032752afed568db41af561960e92a3d1658a2a2984001f",
+          "after_sha256": "444741c804b2a52a7a862389d09c5a4c1f823e5326573dd6a6e81a661814f81f",
+          "size_bytes": 95277,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration); original test fixture retains its MIT notice where present."
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003a-native-api-fixtures.patch",
+      "sha256": "304944afa0acd069a3bf6db54a2977ce899da069605fa7a18997e388503c8f33",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 4,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/Makefile.in",
+          "before_sha256": "14e47555bc5e9149ca81d789d6dba17a77bd0b4fbb7960cff128a8bb08eba444",
+          "after_sha256": "36334d5256b07676d87fc51c2ea91cecca3202358e70e4aaed466ecf3c589bf6",
+          "size_bytes": 1680,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "7d83fa8aa26cbc63c9a08de2cb1c62b7b1a66014cb1f2bd4c871681b1854c24b",
+          "after_sha256": "f971985b852e0605d858a1e567e55a80feef0824dc46a9bd765faebb106e1d87",
+          "size_bytes": 73397,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_abi_fixture.c",
+          "before_sha256": null,
+          "after_sha256": "80836d204a101c52f2921212f015ffe5089b8e06a8303b31d8b27b268ebd027c",
+          "size_bytes": 6104,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration); original test fixture retains its MIT notice where present."
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003b-owned-api-processes.patch",
+      "sha256": "90ecb105025c83efe7d9996e3b77e2fa7d60c46bfc97bcf91b4764790e332cb9",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 5,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "loader/main.c",
+          "before_sha256": "02114af0c8d395f87cfc54aa414396d52f921db1a2b65d0b2c4283cc06361302",
+          "after_sha256": "8b8ac735e36de1a7d16b0bf2570e2fe657b741b113047331ecb54d475ba58bec",
+          "size_bytes": 5846,
+          "mode": "100644"
+        },
+        {
+          "path": "include/Makefile.in",
+          "before_sha256": "96acfdb329de863f4e7147267eeaeafbb19804981cebfdd7ea1a5ac646b85515",
+          "after_sha256": "f89c7d5c47ed20f37dbb4d2fcc41f2a9ba650ad2eaa59f27cbd1973cb68eacc0",
+          "size_bytes": 22112,
+          "mode": "100644"
+        },
+        {
+          "path": "include/wine/pear_bootstrap.h",
+          "before_sha256": "198535e51a025f04cb05ae1085a94c6cc4582d7dc4da333d44b63e1ade81b788",
+          "after_sha256": "e390c95c2db4573d7553cb51d1e1e42ff3c497aa8db982e93ebbc06c2af7e7b3",
+          "size_bytes": 12203,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/process.c",
+          "before_sha256": "d2b284cc0222b8dfc0985fdf88b7f2d33096ae0dee4386dc26463e818c4593ff",
+          "after_sha256": "ade5a827d570e305efec238108ff3a178ea8d231592564073dc5d51dec85f050",
+          "size_bytes": 66903,
+          "mode": "100644"
+        },
+        {
+          "path": "include/wine/pear_stage3.h",
+          "before_sha256": null,
+          "after_sha256": "2523601a29896a098049128c91a56381fff297403626d8a93bff0fc6021a859e",
+          "size_bytes": 6724,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration); original test fixture retains its MIT notice where present."
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003c-native-pe-startup.patch",
+      "sha256": "b6aad691cd554330170db66350a2fea49cf802986f865ce8e6c6fc8c15699510",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 6,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "26bf2d477dd7c5aa8a73546de82836af01b5a8e2e22e9131b1682c89b7ba8585",
+          "after_sha256": "1f58c6498782faa5fb89a9173e20335a5c7afc1487b67c9efd1b58a87c6ac1a8",
+          "size_bytes": 252014,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003d-pe-protection-failure.patch",
+      "sha256": "d3f4dba7deb7ca5747dd0e40d05db931b65cf9d264a1cae9ff4cab85277779e9",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 7,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "1f58c6498782faa5fb89a9173e20335a5c7afc1487b67c9efd1b58a87c6ac1a8",
+          "after_sha256": "f3219145c8a7063a0651f2f7d31f50c59eff834ce22651bd19be4ed275a19491",
+          "size_bytes": 252614,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003e-darwin-pe-publication.patch",
+      "sha256": "08fb5e8fd003eaf3156e730c5ba2864836aa62ca3cd2fee969ba3bc9623667db",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 8,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "configure",
+          "before_sha256": "4da8b4089c966e0e359979eedb7791cb20fb020c808551500778732468729d63",
+          "after_sha256": "a20e88fdde873e57b583b97b71fcd296a0c84d594fdfe282a5ea8a01485487d8",
+          "size_bytes": 745221,
+          "mode": "100755"
+        },
+        {
+          "path": "configure.ac",
+          "before_sha256": "802bf17c6379a6ce33f8d4760131ecf2d400a1db78612b117f288986a63d5452",
+          "after_sha256": "7aa44d0826b6ad18d793474e3f46770292aeb1456d27532d13e5e47546a2331e",
+          "size_bytes": 153601,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/Makefile.in",
+          "before_sha256": "36334d5256b07676d87fc51c2ea91cecca3202358e70e4aaed466ecf3c589bf6",
+          "after_sha256": "d2aa58a7b5c19282e6a2c09a2420aca3c27b7b5f9b6da38285df154e16d167eb",
+          "size_bytes": 1741,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "f3219145c8a7063a0651f2f7d31f50c59eff834ce22651bd19be4ed275a19491",
+          "after_sha256": "9f7af4b1f5b829e9e53ed6ab2c443954df1b07093de09bbd0cb99a0f9e36d0eb",
+          "size_bytes": 260593,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": null,
+          "after_sha256": "50001d02e65344d6c8f852b399e0cba9b51ffa606e6193c5b6d5e68c4154707c",
+          "size_bytes": 34873,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": null,
+          "after_sha256": "79c77cf2335144ab5515242cd408ad95416a4b755b6489738019f410414dbd13",
+          "size_bytes": 1863,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine modifications); MIT (new original native arena files)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003f-pe-import-lifetime.patch",
+      "sha256": "d48e9f4ecda133477f1043222d843c9d5e517d60cbb145c58a5da93178950c26",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 9,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/loader.c",
+          "before_sha256": "cd643f9bd17e1721f8ebe6f7bc3c2c192f7bc19cdbfa454c9d2836877c161aba",
+          "after_sha256": "1f9e4b5ae2192d60230f7c14c429ae9652ed153f66ebcbcfc576d705f0cb0230",
+          "size_bytes": 180134,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003g-relocated-main-startup.patch",
+      "sha256": "8777fcbc444f14429e18beeff63cf8564fa6b5c0afe48a040c8c6fbe914f8f9b",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 10,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/env.c",
+          "before_sha256": "eac82bd2769b1622dd2d308169f9e1750c41169640656e832eb1f8992248396f",
+          "after_sha256": "a02b358df08d35526124a415ab0f875de311f8987e5ef8c386fabd69fa749d40",
+          "size_bytes": 86446,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003h-spawn-input-diagnostics.patch",
+      "sha256": "3a7a98e9bb0726be8de5c038bf68006c2c9b5357c564395c06b2ed7c63ce5e15",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 11,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "f971985b852e0605d858a1e567e55a80feef0824dc46a9bd765faebb106e1d87",
+          "after_sha256": "eabfcbdb5d8629370525e9ba774aa5c209c635c12b732eb452542e06ac43004d",
+          "size_bytes": 80020,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003i-owned-exec-environment.patch",
+      "sha256": "db802cbeb24193400177dc29c353f9202b8a5c505e2a93508797292b4ae1707b",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 12,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "eabfcbdb5d8629370525e9ba774aa5c209c635c12b732eb452542e06ac43004d",
+          "after_sha256": "9056666ffa304ab52ece493d55d072da83e81140330ead148f9ce30f94b01a16",
+          "size_bytes": 80755,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003j-image-count-diagnostic.patch",
+      "sha256": "37f62bf4203fd4ad66bc04cf0586c1c162d35d916d7b4a0b806aeefc526a2e29",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 13,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "include/wine/pear_bootstrap.h",
+          "before_sha256": "e390c95c2db4573d7553cb51d1e1e42ff3c497aa8db982e93ebbc06c2af7e7b3",
+          "after_sha256": "39b86d6fa02d03026d44c85586f18886195ba7c257a301a78cee4de3d95b7a11",
+          "size_bytes": 12416,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003k-image-observation-budget.patch",
+      "sha256": "c07b3a1db6875f7e9d504a2feac51d21d2cbf4f65821ea6763a94ec2f6b674b8",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 14,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "include/wine/pear_bootstrap.h",
+          "before_sha256": "39b86d6fa02d03026d44c85586f18886195ba7c257a301a78cee4de3d95b7a11",
+          "after_sha256": "c3844ad60ea81c96952bc1abdad4328ef25973d6ac80179992358a281018b299",
+          "size_bytes": 12416,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003l-native-architecture-policy.patch",
+      "sha256": "fb2e97e8ed17ad67a0a4bf506e69ccb678bdefae5c9d6d72cdd8c3360e97f3f2",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 15,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "configure.ac",
+          "before_sha256": "7aa44d0826b6ad18d793474e3f46770292aeb1456d27532d13e5e47546a2331e",
+          "after_sha256": "c7e40ccb0a8a61c5d940c2c9c43ca37a091eaf38a2faed19a043e0be7d292ec7",
+          "size_bytes": 154066,
+          "mode": "100644"
+        },
+        {
+          "path": "configure",
+          "before_sha256": "a20e88fdde873e57b583b97b71fcd296a0c84d594fdfe282a5ea8a01485487d8",
+          "after_sha256": "acf2d62208f396208ed812cf7b27246685a541410ec98f1ef89102bc3bb1e217",
+          "size_bytes": 745684,
+          "mode": "100755"
+        },
+        {
+          "path": "server/Makefile.in",
+          "before_sha256": "3b392512efa1322448567ef546ec2a7f060d25c4502048a71c08d429516a81a0",
+          "after_sha256": "1db7fadbda0e66a1f9f600d66bef1b85f28f38e9a80f3b9e7120ccd753dc3240",
+          "size_bytes": 901,
+          "mode": "100644"
+        },
+        {
+          "path": "server/registry.c",
+          "before_sha256": "c29125d9590afc0f2d864208a7c681f97657b1a2e925780524e31095de02a0f8",
+          "after_sha256": "c93b57df78d5394952baf227efb0beb3f6be375fdbb1cf94837758b9b45d98b1",
+          "size_bytes": 75803,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003m-relocation-fixture-capacity.patch",
+      "sha256": "c726e97f2f24d4fe1fcec6695372827d7f55ffe3136cb44120d2d23c6ff00bcf",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 16,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "79c77cf2335144ab5515242cd408ad95416a4b755b6489738019f410414dbd13",
+          "after_sha256": "d4476ae8fdae5c985666fb83ca49bcedf235d7ca2a85d644c36a626b0cb6011b",
+          "size_bytes": 1977,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear owner header); LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0003n-complete-security-cookie-field.patch",
+      "sha256": "e5de5c68c62616065c353a79c53a803404a0471c84b9aeb223234d455b801d8a",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "96bcf55e31f2778330b08354309482d4f4983f35",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 17,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "50001d02e65344d6c8f852b399e0cba9b51ffa606e6193c5b6d5e68c4154707c",
+          "after_sha256": "101aa7d8d762759621a9c61cf9d0dc7e29b7d5da81b86ea8179995ca81f4af27",
+          "size_bytes": 35145,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear owner); LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0004-darwin-dynamic-memory.patch",
+      "sha256": "2a80b367d3fe2b4f86dc5269c74a0dcf55323e0ba50c0e0a6f0618a26239ebb1",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "0f59a42ccc7264068fed40c020dbd40ae7b81c4c",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 18,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "9f7af4b1f5b829e9e53ed6ab2c443954df1b07093de09bbd0cb99a0f9e36d0eb",
+          "after_sha256": "121787b1485c3c424c32e660a184ab0bee3206a9ed9486f99d247d80bfa9896b",
+          "size_bytes": 265460,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "101aa7d8d762759621a9c61cf9d0dc7e29b7d5da81b86ea8179995ca81f4af27",
+          "after_sha256": "e3e70366af63da6d9fa3c0f87485c8ab58d3561fcbcdefd4f56fb41c2858a9d7",
+          "size_bytes": 46899,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "d4476ae8fdae5c985666fb83ca49bcedf235d7ca2a85d644c36a626b0cb6011b",
+          "after_sha256": "4fbfb56210bd6f011c4dde7d3389e6efa7f2bbe5116ee45d4ffd5b05c2a4c713",
+          "size_bytes": 3074,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear owner); LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0004a-darwin-thread-signal-observation.patch",
+      "sha256": "0af8fff4dffac4f380c970311e40c10a975d3c039a77a752224a606d97120e63",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "0f59a42ccc7264068fed40c020dbd40ae7b81c4c",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 19,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/Makefile.in",
+          "before_sha256": "d2aa58a7b5c19282e6a2c09a2420aca3c27b7b5f9b6da38285df154e16d167eb",
+          "after_sha256": "dca23fdb80cec1ac569a7ccc6899676100db23953df5b1fae9f092bd774e5434",
+          "size_bytes": 1771,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "9056666ffa304ab52ece493d55d072da83e81140330ead148f9ce30f94b01a16",
+          "after_sha256": "67b07af46a939203418309d2e278d1d135d1a8caaa92b6c7bbb3eb704c2b7434",
+          "size_bytes": 80837,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_signal_fixture.c",
+          "before_sha256": null,
+          "after_sha256": "cadae5facb0185304e55daf363c8b1efd59d3a4969ca8908ab4b7d8a3c77b4f7",
+          "size_bytes": 16590,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/server.c",
+          "before_sha256": "23c0d22d373cd1825340d725232e5a4521f65aa3abece16fc312553bf2f9a4a7",
+          "after_sha256": "14b0d54d74a7c992ceebeb57c2fec2b05ca53bfa8b9ef698b126d06d77c76617",
+          "size_bytes": 69709,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "444741c804b2a52a7a862389d09c5a4c1f823e5326573dd6a6e81a661814f81f",
+          "after_sha256": "ce0991f5e2be2d11a159e3552904714d7c32fd946365aa5c4034512e66bbc55c",
+          "size_bytes": 95547,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/stage4_protocol.h",
+          "before_sha256": null,
+          "after_sha256": "fed6aec99834a1960e3a4ef4e116879fb64a0d7b019d84300c7cd82022635555",
+          "size_bytes": 2431,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/thread.c",
+          "before_sha256": "0db3d5d025a7571d7370b3268bb52e52214e6a2c9c02dee5ef9d7c2c5c20af0d",
+          "after_sha256": "8ad51c83cfab8a30c844a9e90032e3cd89092e1c4b56ca80ed18908709192b24",
+          "size_bytes": 102831,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear fixtures); LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0005-darwin-mac-driver-observation.patch",
+      "sha256": "dd0e7e47ffc573e2bee1fb85ac1e37913d133da6bb60dbd5de47ac147b888bbb",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "f2c0d4667f904591fbd5d1260e6bfd26916f047a",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 20,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/Makefile.in",
+          "before_sha256": "8aba97438b685d56e11574d1a84ef7efd6e39bb83a0cbe9f3f5a269a6553712d",
+          "after_sha256": "4ceac5825201e79344f5fd7c085530eeaaa5a67df0fe8cdc71ac74a437fe9ab0",
+          "size_bytes": 820,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/unixlib.h",
+          "before_sha256": "210ed99192d37c333fe408cf8574d877cbcf3e7088224ecf17c0eb7878876615",
+          "after_sha256": "fa5b6dd79f04bf0aad74e032398a26773b8bba7267ee0607a791a614354f2443",
+          "size_bytes": 1794,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/macdrv_main.c",
+          "before_sha256": "080ba76c6051653404b0e1e4d6372df506558853049a868aaf66b9063994acb4",
+          "after_sha256": "5aecdce66843f72eb442d11578bb056401c83f3c43060a46cfca39809ed19944",
+          "size_bytes": 20713,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/event.c",
+          "before_sha256": "cdb454430ff065923137358ca472e74804d26c1928a8c7b80505042cb27ab939",
+          "after_sha256": "4e1f356dfee936496e88526bd806ad29c10447005073869dabf484673b9f7174",
+          "size_bytes": 16819,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/cocoa_window.m",
+          "before_sha256": "e0cb71dfbfd53d746ace4bf7347124d5f3440d5741a374c404d4855d74c10677",
+          "after_sha256": "c0e76d138b4970d735fed4b28bd01413756403a724a8c9878b408af799aa8655",
+          "size_bytes": 136274,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/winemac.drv.spec",
+          "before_sha256": null,
+          "after_sha256": "c5eb7b6098795cc4aa185cee6f64fdff7f5a9dc716df963c0c68c577e7d7a2ae",
+          "size_bytes": 33,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_window_fixture.m",
+          "before_sha256": null,
+          "after_sha256": "34124c67632916b0f9ef5437a3c8e874deec32ee242903c85ffade688cb00ed1",
+          "size_bytes": 28452,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_window_control.c",
+          "before_sha256": null,
+          "after_sha256": "2cb1c0da0f9eac5f1d8c63a24ed74a2e6ed0f37d6f8fdf0c5d718afece057a44",
+          "size_bytes": 316,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/stage5_protocol.h",
+          "before_sha256": null,
+          "after_sha256": "bb2990f08bdf693b9223a7d1271723c2915fa87dface3fe39e8771c6f93201e5",
+          "size_bytes": 3728,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/cocoa_app.m",
+          "before_sha256": "28f65732bee547814dcbecc95efc51fb3f235f61ae7b98c5b3d05fde63e906eb",
+          "after_sha256": "05037cecb2278e45fe24576f2720e6343b8ba1ec255f414761040d5270955ddf",
+          "size_bytes": 103890,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/cocoa_event.m",
+          "before_sha256": "74c73f76c24d810639a102642f2e484e34db3d7e3dc330affb1c2b0574b8c8b1",
+          "after_sha256": "bd6caaf1d052164586d3fc643aca199392016b1bb11d963a12c6e7572762a438",
+          "size_bytes": 26302,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/stage5_census.h",
+          "before_sha256": null,
+          "after_sha256": "2abc01e678e964c7d45c097f73ad6c2714ac65ae5c1e18453bf97d35786dd226",
+          "size_bytes": 6853,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear fixtures); LGPL-2.1-or-later (Wine integration)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0005a-window-fixture-capacity.patch",
+      "sha256": "8268f7c6699d56cf847a4f2056e84e2d292ae6dd2e56bf12712b7fe39506fcff",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "f2c0d4667f904591fbd5d1260e6bfd26916f047a",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 21,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "4fbfb56210bd6f011c4dde7d3389e6efa7f2bbe5116ee45d4ffd5b05c2a4c713",
+          "after_sha256": "5a62ac6debf9752387321776da0b31e2fdf1266c4f93eb154029179d800d8eba",
+          "size_bytes": 3074,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear owner header)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0006-system-thread-exception-order.patch",
+      "sha256": "fc959d58be8994ba104e2bc4dfbaa0ee72d9dd1333d409a52e59b6574c18ae13",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "496c7f5367a935ae2f4abb3b7477d37bc13bea9b",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 22,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "ce0991f5e2be2d11a159e3552904714d7c32fd946365aa5c4034512e66bbc55c",
+          "after_sha256": "c3ce004e3bae9e86f49e2613fb14bdf54cf055f7293c3a9d0149107bd6dc788a",
+          "size_bytes": 95566,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (existing Wine source)"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0006a-cocoa-startup-request-lifetime.patch",
+      "sha256": "2733178e8b82b22a862e50c5ef2e840ced84525a1bb1828f5b066a5e84011b51",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "496c7f5367a935ae2f4abb3b7477d37bc13bea9b",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 23,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/cocoa_main.m",
+          "before_sha256": "041d1dc87bde43a3fcf73124cb6b7e0b4bd4461937d5b1a7fa564fc1f4aeb1da",
+          "after_sha256": "59c0daf5029b053d63ad23b55932382aed282b1d7a5571ebb196c27231c7492a",
+          "size_bytes": 7623,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (existing Wine source)"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/memory/0003a-wine-owner-core.patch",
+      "sha256": "70bf01c6bdf5b6b3ad7d36b369db77d4668243daf9cc8270fae460631573ba07",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "19e9a3134ad9e0cbd7038315b54af3635d019672",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 24,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "include/wine/pear_fex_memory.h",
+          "before_sha256": null,
+          "after_sha256": "bee4d7f58bb796f7b86f85e5bf3d3dc9100a9df51789f0522762c6846d9ad1cf",
+          "size_bytes": 6905,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory_private.h",
+          "before_sha256": null,
+          "after_sha256": "fc30e4644ac76554413697006cb36780ceceea32a5531f91ce2726fb4be3cdd3",
+          "size_bytes": 2739,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": null,
+          "after_sha256": "8999a814e9e85c0526602d13d9d8bea67a612b5f12c21cf1dbd6ca21a6bcd82d",
+          "size_bytes": 40520,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "5a62ac6debf9752387321776da0b31e2fdf1266c4f93eb154029179d800d8eba",
+          "after_sha256": "e6fc8f13b71cdfa4a72cbdf175e1aa6d26c4fcb0eb83356e1cc545d848899572",
+          "size_bytes": 3566,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "e3e70366af63da6d9fa3c0f87485c8ab58d3561fcbcdefd4f56fb41c2858a9d7",
+          "after_sha256": "53fc470a5e0117324cacbbb58f493d420a0d3fa23fdc5e5a9cd7d715e618c6ce",
+          "size_bytes": 51946,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear additions); baseline Wine LGPL-2.1-or-later files retain their notices"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/memory/0003b-wine-owner-bridge.patch",
+      "sha256": "20b04404e365cda100f9829cfbad38ae822d54b927cf6d9719c9933d863b2fbe",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "19e9a3134ad9e0cbd7038315b54af3635d019672",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 25,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "121787b1485c3c424c32e660a184ab0bee3206a9ed9486f99d247d80bfa9896b",
+          "after_sha256": "d75164516a1ff8eb6ab5e7c53a20be41388ce7f6986c3536fcf79b793427ec6b",
+          "size_bytes": 295323,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/Makefile.in",
+          "before_sha256": "dca23fdb80cec1ac569a7ccc6899676100db23953df5b1fae9f092bd774e5434",
+          "after_sha256": "31cc3f52a7d258e88d19b42a014bdbb4fd102ff057e5d8d5424d6fa7281ca139",
+          "size_bytes": 1818,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unixlib.h",
+          "before_sha256": "b80d8d2ad7e68516627b3611020c093555176ff585dfcb88cb0244e32ca0ade3",
+          "after_sha256": "2815e818d5fa34a5de251fec58899048da6440caef9b12a939dd6d35c82a25ff",
+          "size_bytes": 2153,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/loader.c",
+          "before_sha256": "67b07af46a939203418309d2e278d1d135d1a8caaa92b6c7bbb3eb704c2b7434",
+          "after_sha256": "cec2d1a1e00131a02750046bea52a7931a5ee3bf8e470a7b22dea763e72172cc",
+          "size_bytes": 81036,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/ntdll.spec",
+          "before_sha256": "63f7958120f7c51514422ca768b37fe7bb3452de88e2ce988e1fac757cc7da54",
+          "after_sha256": "0bfef154483bfd48a20f3ff9f7822bc8cef769ee24e65affd6dede87c80fab81",
+          "size_bytes": 88245,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/pear_fex_memory.c",
+          "before_sha256": null,
+          "after_sha256": "857baee07e2f0c3e3dd05da2a2a3eb96c5aa9b3d40b242aa511d9b09d83b349d",
+          "size_bytes": 4776,
+          "mode": "100644"
+        },
+        {
+          "path": "include/Makefile.in",
+          "before_sha256": "f89c7d5c47ed20f37dbb4d2fcc41f2a9ba650ad2eaa59f27cbd1973cb68eacc0",
+          "after_sha256": "7b0dd9c2957aacb944185e7ac039c990b25bd4fbf6718e4ab01e7b1051724b53",
+          "size_bytes": 22138,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear additions); baseline Wine LGPL-2.1-or-later files retain their notices"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/memory/0003ah-wine-metadata-observation.patch",
+      "sha256": "c9e834880401f7db2135e9aff7097399c207ce7691c2686ff797a7ca1fdf9246",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 26,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "include/wine/pear_fex_memory.h",
+          "before_sha256": "bee4d7f58bb796f7b86f85e5bf3d3dc9100a9df51789f0522762c6846d9ad1cf",
+          "after_sha256": "a089b475fe6d6f2401977319eb4f0702e85c0753063f5748093131088f9f8b55",
+          "size_bytes": 8507,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory_private.h",
+          "before_sha256": "fc30e4644ac76554413697006cb36780ceceea32a5531f91ce2726fb4be3cdd3",
+          "after_sha256": "6deec3f8deecfffe6d39f418fead96706483abaafda60d37405b262fa102e1c3",
+          "size_bytes": 2979,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "8999a814e9e85c0526602d13d9d8bea67a612b5f12c21cf1dbd6ca21a6bcd82d",
+          "after_sha256": "bd8f4af4af3b63c9062a83984b38ec9192548b8d44f60553d956a989b2d8d66b",
+          "size_bytes": 41414,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "53fc470a5e0117324cacbbb58f493d420a0d3fa23fdc5e5a9cd7d715e618c6ce",
+          "after_sha256": "e05deb652ea7cf4a9fb23d8ee5fe29b07ac3caf760ae81a26cf80d59f1a29777",
+          "size_bytes": 52585,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "d75164516a1ff8eb6ab5e7c53a20be41388ce7f6986c3536fcf79b793427ec6b",
+          "after_sha256": "119835040ab6333c577936237818b05c0b189b506795975123559cec25c8dd70",
+          "size_bytes": 297920,
+          "mode": "100644"
+        }
+      ],
+      "license": "Original Pear additions, MIT; existing Wine LGPL notices retained"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/memory/0003ai-wine-bitmap-diagnostic-selection.patch",
+      "sha256": "715c03917c163539e089f67e7c2d529e46dcd9d77c7c3dc8a2688eabb4616785",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 27,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "119835040ab6333c577936237818b05c0b189b506795975123559cec25c8dd70",
+          "after_sha256": "d5ac1cc512bfba2de1f6fd868fab2b3098c9a3603a7ba71ff7b1c142e950060f",
+          "size_bytes": 298744,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear diagnostic selection); Wine LGPL-2.1-or-later file retains its notice"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/memory/0003aj-wine-view-backing-admission.patch",
+      "sha256": "29a2b3413880b87fb0440be854ca9a2348e936f9afaaa3dc88f0cba7d88ce2dc",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 28,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "d5ac1cc512bfba2de1f6fd868fab2b3098c9a3603a7ba71ff7b1c142e950060f",
+          "after_sha256": "4c488745dfd30e31cde2980da31e46848414e8b877dd83bd93e5123ed22e7954",
+          "size_bytes": 299449,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT (original Pear bounded admission); Wine LGPL-2.1-or-later file retains its notice"
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004a-validated-pe-role-reader.patch",
+      "sha256": "022d14d83b8dbb5e04b54907c90e87f3622d000e12324f1dc4b34f9768b97923",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 29,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "e6fc8f13b71cdfa4a72cbdf175e1aa6d26c4fcb0eb83356e1cc545d848899572",
+          "after_sha256": "a2bf8f8696333a6e2491b25835d1ed524bb7baa9f0cee355ae057818fe98dcef",
+          "size_bytes": 3848,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "e05deb652ea7cf4a9fb23d8ee5fe29b07ac3caf760ae81a26cf80d59f1a29777",
+          "after_sha256": "7929b001e082f46f616000dcefdbf58cf0af767b67768dfa4ad412f0528b5560",
+          "size_bytes": 60110,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004b-select-arm64x-staging.patch",
+      "sha256": "15e7ece5642f3f4b4f57c810aca5434d0f749c71a989640826645ff61e5202a2",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 30,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "7929b001e082f46f616000dcefdbf58cf0af767b67768dfa4ad412f0528b5560",
+          "after_sha256": "37a7353e51528e6f874186a24354015dc54aec9f066c7e1bba9d997c493b9539",
+          "size_bytes": 68472,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004c-publish-role-aware-images.patch",
+      "sha256": "87a0ba4f71af813a38ff1aca2c7d5e6421f2b693ce8642b1b8337695abbcdb75",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 31,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "a2bf8f8696333a6e2491b25835d1ed524bb7baa9f0cee355ae057818fe98dcef",
+          "after_sha256": "e3c0899b84d7bf380524ad0c0710940156fac367ebc77b33442952679adb01a5",
+          "size_bytes": 3897,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "37a7353e51528e6f874186a24354015dc54aec9f066c7e1bba9d997c493b9539",
+          "after_sha256": "3af4da71e6e99f18588e6f6b582290c8a7c503bd8313ab6c16ff1be4cedb5c0b",
+          "size_bytes": 69026,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "4c488745dfd30e31cde2980da31e46848414e8b877dd83bd93e5123ed22e7954",
+          "after_sha256": "f4949deeeb1e0617ddbabf08c9223003cdc05ffc6a2ea56de0a61077da881533",
+          "size_bytes": 302927,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004d-bind-translator-and-jit-bitmap.patch",
+      "sha256": "41738e682603ecde6e18914b17ff6d02919fd7d85a844636e303a1a6f672835e",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 32,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "f4949deeeb1e0617ddbabf08c9223003cdc05ffc6a2ea56de0a61077da881533",
+          "after_sha256": "b07b6c830f5bb35fa2972b832ed15702d52b88a7c6f18cf7db42d7b0865c68d4",
+          "size_bytes": 305868,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/pear_fex_memory.c",
+          "before_sha256": "857baee07e2f0c3e3dd05da2a2a3eb96c5aa9b3d40b242aa511d9b09d83b349d",
+          "after_sha256": "a299ce12fd9f79f4944cdfa5c1aa5d4d1ce933edcd65c8ce62f928bcc062b063",
+          "size_bytes": 6438,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/ntdll_misc.h",
+          "before_sha256": "3bc81abfbd245c5866329d63367d6d6e3e635866d1d6bd3b21324e4ad6abb43f",
+          "after_sha256": "31244a2730f977c1228dfcbac4e2e611ec30b31c069ccf71af87a2e2e55f6ed8",
+          "size_bytes": 8522,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/signal_arm64ec.c",
+          "before_sha256": "8b7814fedfc537c64d692981a2ae6e3bae89fb91d4ff2efe81343f33f513639d",
+          "after_sha256": "f740d06191d762008e0a926339a054e032e8b2b89b4ceb7772471c6b7514e010",
+          "size_bytes": 108332,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004e-export-ec-owner-bridge.patch",
+      "sha256": "838d480e11dadd24f8ca6f5c9b7ffe1749bc1e14a937477d9fc19c175a292ba1",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 33,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/ntdll.spec",
+          "before_sha256": "0bfef154483bfd48a20f3ff9f7822bc8cef769ee24e65affd6dede87c80fab81",
+          "after_sha256": "73981dd70ec38f032d7d54bb0f91d5142c57e103f287ed2bed242930658e362e",
+          "size_bytes": 88253,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004g-native-arm64x-selection.patch",
+      "sha256": "1c571ec013fa8c9ed69c9cc7388b6d5af03eda87c18e4951aa137deaf932e87c",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 34,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "3af4da71e6e99f18588e6f6b582290c8a7c503bd8313ab6c16ff1be4cedb5c0b",
+          "after_sha256": "dac7ddfd6422e26cf5fb953e504d271a28f8ca88a6c32151033ae445a98f9bf0",
+          "size_bytes": 69534,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004h-select-first-main-image.patch",
+      "sha256": "f28a3a3673cf19a23c646754d92a0f25b802c344468384ca61b59a08c5b4398c",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 35,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "b07b6c830f5bb35fa2972b832ed15702d52b88a7c6f18cf7db42d7b0865c68d4",
+          "after_sha256": "9ac8e28115459aea6968a70e9010fb2f11c20b3e214049968e8ea815d9c52702",
+          "size_bytes": 306221,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004k-image-publication-checkpoints.patch",
+      "sha256": "8ed26e01889b49564028311c5e7b214ac2846998c04e65211413c9ceb6ed0795",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 36,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "9ac8e28115459aea6968a70e9010fb2f11c20b3e214049968e8ea815d9c52702",
+          "after_sha256": "5fee79839c1a91573a9e0d67b9ef9ac6a89f137d712a9772ba5248eff31fb370",
+          "size_bytes": 306405,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004p-native-context-resume-observation.patch",
+      "sha256": "14e4a5d2f39f85ae806f45e830aeddcddca516e567d7c70c46dfe8fa00f943b6",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 37,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "c3ce004e3bae9e86f49e2613fb14bdf54cf055f7293c3a9d0149107bd6dc788a",
+          "after_sha256": "ed61e67b9b8789a2c0632ce0a5475c89a8a3bc4d853a405b346aa2c2f35716a9",
+          "size_bytes": 96157,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/fex/patches/integration/0004r-ec-readonly-metadata.patch",
+      "sha256": "ca73f1092e51e551aa3a1a75ca7ba7a54cab6e96588835cdfb42e76d7e636a6e",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "91fc9b36ec9a83407059c6a1f5f3be602d13fdbb",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 38,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "bd8f4af4af3b63c9062a83984b38ec9192548b8d44f60553d956a989b2d8d66b",
+          "after_sha256": "c53f9a2bafe5d9cced3bcc6e1cda8f195175e68f2d2adb04c902a2d77dd72e2b",
+          "size_bytes": 41376,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/dxmt/patches/wine/0001-typed-metal-lease.patch",
+      "sha256": "244654459ec2734a5bf47f409537345b173de849d44b1e5fe280f938fd21057e",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "2b6732df5bb9fc40af4c9eb8c72ded493acf1742",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 39,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/Makefile.in",
+          "before_sha256": "4ceac5825201e79344f5fd7c085530eeaaa5a67df0fe8cdc71ac74a437fe9ab0",
+          "after_sha256": "ecddb1449e51f8345e5cae78b764f7bb116054f027e95f2426ff655f24f0fa4a",
+          "size_bytes": 891,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/cocoa_window.m",
+          "before_sha256": "c0e76d138b4970d735fed4b28bd01413756403a724a8c9878b408af799aa8655",
+          "after_sha256": "287724940e792c7af070135aad4ce8663a4ae02bf54be26969f5279a8a7522c0",
+          "size_bytes": 138516,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/macdrv.h",
+          "before_sha256": "d03c2bbd9c473dac187587cf805492a02527a93dbd25ac3394746951decd6b95",
+          "after_sha256": "c1ab92b1ef140b82ce71442d8c8a7c6fe73530db6688976f262fc3414233b9ec",
+          "size_bytes": 16763,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/macdrv_main.c",
+          "before_sha256": "5aecdce66843f72eb442d11578bb056401c83f3c43060a46cfca39809ed19944",
+          "after_sha256": "f3f5d3a5d39b9526be82106065e3ac1e722757802006485451bea6d11c20ba67",
+          "size_bytes": 20829,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_dxmt/winemetal.h",
+          "before_sha256": null,
+          "after_sha256": "0602671b1a3dd3994dfa12492ec1dfb4001e02534f2b7429949eea840ec8940c",
+          "size_bytes": 64158,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_dxmt/winemetal_thunks.h",
+          "before_sha256": null,
+          "after_sha256": "c424046b565f99e0b99cf8aa95c28008c64d5812dd1c0d6d15753aab76445215",
+          "size_bytes": 9125,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_macdrv_metal_v1.h",
+          "before_sha256": null,
+          "after_sha256": "7a19ce6b49c19ab7603ff875d6e9d92ababa92dd1202fb3c912f02c2f6e5275d",
+          "size_bytes": 1684,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_metal_bridge.m",
+          "before_sha256": null,
+          "after_sha256": "91456e806a763242603454cdb63ba71acdb3e7cf06ef59bd7a2eb09369c2bf87",
+          "size_bytes": 9451,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_metal_control.c",
+          "before_sha256": null,
+          "after_sha256": "b3b7838d7aa1e5728dfc568ab1b7f73edf95b0e199491ce24fd2bd4dbd19432c",
+          "size_bytes": 340,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_metal_pairing.m",
+          "before_sha256": null,
+          "after_sha256": "a5224ea8da15172b1d5597f17955564f546da8269d6be21b1b66ff8471aa2d77",
+          "size_bytes": 15997,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_metal_protocol.h",
+          "before_sha256": null,
+          "after_sha256": "64354b4685d66a22e7c565b20f30a1386bfa7e22c0220de9219ff78a9dbece91",
+          "size_bytes": 721,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/unixlib.h",
+          "before_sha256": "fa5b6dd79f04bf0aad74e032398a26773b8bba7267ee0607a791a614354f2443",
+          "after_sha256": "54bcf19a48355409cb8c770bdab0a011914aef8195c37a14d8aeba46b0f99bdc",
+          "size_bytes": 1823,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/window.c",
+          "before_sha256": "6f4c8879161c7a231e562b26d16852bc1a1048b9a431a018cfbd2b9399fc2533",
+          "after_sha256": "de2443efcfbb8d067540a90d555c5819b233601be791ef943294eb50fae09305",
+          "size_bytes": 72939,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/winemac.drv.spec",
+          "before_sha256": "c5eb7b6098795cc4aa185cee6f64fdff7f5a9dc716df963c0c68c577e7d7a2ae",
+          "after_sha256": "593d9d7e1ed438a7b6352b9e0c0fedd102037f927a4ce52d980b4a737daef1a5",
+          "size_bytes": 72,
+          "mode": "100644"
+        }
+      ],
+      "license": "LGPL-2.1-or-later (integration); MIT original private header/fixtures retain notices"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0004-arm64-native-heap-reservation.patch",
+      "sha256": "8ab5deb0cf144e8c50f02fe2353613ec33123e558525904476dfa9f10264541f",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "24e1afa907c6884b9fc2d396e2c6555d287f1f6d",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 40,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "loader/main.c",
+          "before_sha256": "8b8ac735e36de1a7d16b0bf2570e2fe657b741b113047331ecb54d475ba58bec",
+          "after_sha256": "75824fbfbdce2adceefc736cad1de70d1fa01bf38e7f695a5dff4da64ee04617",
+          "size_bytes": 6613,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/0005-fex-caller-without-loader-lock.patch",
+      "sha256": "10347f5c5097bc6270959dda3c9354484615d9400740a7b48e0c5fe88b7f26bf",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "b049adfdfd0fdbc0551fc61156ab60dc30d86051",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 41,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/pear_fex_memory.c",
+          "before_sha256": "a299ce12fd9f79f4944cdfa5c1aa5d4d1ce933edcd65c8ce62f928bcc062b063",
+          "after_sha256": "99050d8e45e52f93ef05180ed6c41e43adba7f9d1e273eafbcabda7dbe2beb6f",
+          "size_bytes": 7017,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/dxmt/patches/0004-presentation-registry-observation.patch",
+      "sha256": "6b15be51a41d9c90eaff16dfd82cf6288c23d7ae2a56e2f08a91d612d88825d1",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "86d3fd7beb940c7c4bb6b8daf91e49c3d434224b",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 42,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/pear_metal_bridge.m",
+          "before_sha256": "91456e806a763242603454cdb63ba71acdb3e7cf06ef59bd7a2eb09369c2bf87",
+          "after_sha256": "19170517eb543b0970ebcbc40a68d1186d71f012bf6d1c801eaf445af156178b",
+          "size_bytes": 10000,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/dxmt/patches/0005-managed-window-surface.patch",
+      "sha256": "0863b89db8d9e07386126d418980b5ec88127856cee1d599e4cef0c16b56955f",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "86d3fd7beb940c7c4bb6b8daf91e49c3d434224b",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 43,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/pear_metal_bridge.m",
+          "before_sha256": "19170517eb543b0970ebcbc40a68d1186d71f012bf6d1c801eaf445af156178b",
+          "after_sha256": "5f76acbd41a0f7bf7005972ee086644de34045632d509e554c2b18bb17affded",
+          "size_bytes": 11635,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/window.c",
+          "before_sha256": "de2443efcfbb8d067540a90d555c5819b233601be791ef943294eb50fae09305",
+          "after_sha256": "6477b9b73f433bb5c5435713940c95e933473d9f0145f7250b6297363294513d",
+          "size_bytes": 73092,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_macdrv_metal_v2.h",
+          "before_sha256": null,
+          "after_sha256": "c2da86219c1c90939339c39086b24d68a86d672cf72f239a88df3ac402be0eb9",
+          "size_bytes": 925,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_surface_owner.h",
+          "before_sha256": null,
+          "after_sha256": "c17e9033041f2b8f9b62c877eadbac2187688453a538d67d5622f323b0b3f0f0",
+          "size_bytes": 4891,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/win32u/window.c",
+          "before_sha256": "ab4e0c843de1172192fb40fff8ebfbc02db8c1eb2eb43e936bdbd58cb67457cd",
+          "after_sha256": "29ffaf427dd689b4ecc43a086f71a3adfb8954c845d3b255701ec1d824abd373",
+          "size_bytes": 220657,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/dxmt/patches/0007-managed-surface-controls.patch",
+      "sha256": "cfe2fe1cec302aa27cf6c83f245d6aac163d987b4ea647bdcb4d597535df4a1b",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "86d3fd7beb940c7c4bb6b8daf91e49c3d434224b",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 44,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/winemac.drv/pear_surface_owner.h",
+          "before_sha256": "c17e9033041f2b8f9b62c877eadbac2187688453a538d67d5622f323b0b3f0f0",
+          "after_sha256": "6301219112fe68265815f7c0565602b6baedf55525b6f9d5486ccbc7468958c1",
+          "size_bytes": 5710,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/winemac.drv/pear_metal_pairing.m",
+          "before_sha256": "a5224ea8da15172b1d5597f17955564f546da8269d6be21b1b66ff8471aa2d77",
+          "after_sha256": "dca814eb250212bf3e0983baba7aac63edf4d55000938ca07e122e7e7d948eb4",
+          "size_bytes": 19558,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/gameassembly/0001-admission-diagnostics.patch",
+      "sha256": "5defcf93a5edeb089d673285f8bb232453804c9c80c15daab01e4c715bb4edb4",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "848778128760c1839fdc0221b9341ab253892b2e",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 45,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.c",
+          "before_sha256": "dac7ddfd6422e26cf5fb953e504d271a28f8ca88a6c32151033ae445a98f9bf0",
+          "after_sha256": "4b91a66df05791bba2d454dd5c3c2131a3dffea339f9608db29c9ed68457d6de",
+          "size_bytes": 71063,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "e3c0899b84d7bf380524ad0c0710940156fac367ebc77b33442952679adb01a5",
+          "after_sha256": "89ef518c0dc4008dd2392e6291082260028685005034c9079d20d7bd14422e34",
+          "size_bytes": 3978,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "5fee79839c1a91573a9e0d67b9ef9ac6a89f137d712a9772ba5248eff31fb370",
+          "after_sha256": "624b909228b6e3329355b0d8cde2a60bd98c6fa84f7f2cc2d59a0118e05d15f4",
+          "size_bytes": 306842,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/gameassembly/0002-image-admission.patch",
+      "sha256": "dd0717923230d2bb9db6c359824300dee4b277b0c3254dee4454a5fdde34acfd",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "last_path_commit": "7ef56cda6a7b86bee30c05e47a3bbcb68b62041c",
+      "matches_last_path_commit": true,
+      "origin_kind": "committed Pear patch",
+      "order": 46,
+      "layer": "accepted",
+      "previous_classification": "accepted_base",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_pe_arena.h",
+          "before_sha256": "89ef518c0dc4008dd2392e6291082260028685005034c9079d20d7bd14422e34",
+          "after_sha256": "dccb37fd2f3506ac95539f8c084860f426b338976862e734b6e307df87a228a3",
+          "size_bytes": 3978,
+          "mode": "100644"
+        }
+      ],
+      "license": "MIT"
+    }
+  ],
+  "source_semantics": "Exact selected source checkpoint; merged source ownership view is distinct from per-artifact compilation views.",
+  "source_authority": "Imported checkpoint; final authority cutover requires separate owner acceptance.",
+  "private_inputs": "No game-derived selector, owned image/spec/role data, private diagnostics, prefix, credentials or signing data is imported.",
+  "generated_inputs": [],
+  "imported_headers": [
+    {
+      "path": "dlls/winemac.drv/pear_dxmt/winemetal.h",
+      "provider": "pear-dxmt",
+      "provider_path": "src/winemetal/winemetal.h",
+      "sha256": "0602671b1a3dd3994dfa12492ec1dfb4001e02534f2b7429949eea840ec8940c",
+      "authority": "Pinned upstream DXMT export; edit the provider, never this consumer mirror."
+    },
+    {
+      "path": "dlls/winemac.drv/pear_dxmt/winemetal_thunks.h",
+      "provider": "pear-dxmt",
+      "provider_path": "src/winemetal/winemetal_thunks.h",
+      "sha256": "c424046b565f99e0b99cf8aa95c28008c64d5812dd1c0d6d15753aab76445215",
+      "authority": "Pinned upstream DXMT export; edit the provider, never this consumer mirror."
+    }
+  ],
+  "exports": [
+    {
+      "path": "dlls/winemac.drv/pear_macdrv_metal_v1.h",
+      "sha256": "7a19ce6b49c19ab7603ff875d6e9d92ababa92dd1202fb3c912f02c2f6e5275d"
+    },
+    {
+      "path": "dlls/winemac.drv/pear_macdrv_metal_v2.h",
+      "sha256": "c2da86219c1c90939339c39086b24d68a86d672cf72f239a88df3ac402be0eb9"
+    },
+    {
+      "path": "include/wine/pear_fex_memory.h",
+      "sha256": "a089b475fe6d6f2401977319eb4f0702e85c0753063f5748093131088f9f8b55"
+    }
+  ]
+}

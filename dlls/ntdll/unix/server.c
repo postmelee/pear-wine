@@ -23,6 +23,7 @@
 #endif
 
 #include "config.h"
+#include "wine/pear_bootstrap.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -1633,6 +1634,8 @@ void server_init_process( struct thread_data *data )
         fd_socket = server_connect();
     }
 
+    if (pear_bootstrap_enabled()) server_pid = pear_bootstrap_peer( fd_socket );
+
     /* setup the signal mask */
     sigemptyset( &server_block_set );
     sigaddset( &server_block_set, SIGALRM );
@@ -1725,7 +1728,11 @@ void server_init_process( struct thread_data *data )
     }
 
     for (i = 0; i < supported_machines_count; i++)
-        if (supported_machines[i] == current_machine) return;
+        if (supported_machines[i] == current_machine)
+        {
+            pear_bootstrap_handshake( "loader", server_pid, server_start_time );
+            return;
+        }
 
     fatal_error( "wineserver doesn't support the %04x architecture\n", current_machine );
 }
@@ -1777,6 +1784,8 @@ void server_init_process_done(void)
  *
  * Send an init thread request.
  */
+extern void pear_stage4_thread_start(struct thread_data *);
+
 void server_init_thread( struct thread_data *data )
 {
     int reply_pipe;
@@ -1802,6 +1811,9 @@ void server_init_thread( struct thread_data *data )
     if (data->teb)
     {
         init_teb_data( data );
+#if defined(__APPLE__) && defined(__aarch64__)
+        pear_stage4_thread_start(data);
+#endif
         signal_start_thread( data->start, data->param, data->teb );
     }
     else if (data->start)

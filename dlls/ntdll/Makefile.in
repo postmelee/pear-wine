@@ -1,4 +1,4 @@
-EXTRADEFS = -D_NTSYSTEM_ -D_ACRTIMP= -DWINBASEAPI=
+EXTRADEFS = -D_NTSYSTEM_ -D_ACRTIMP= -DWINBASEAPI= $(PEAR_NATIVE_PE_PUBLICATION_CFLAGS)
 MODULE    = ntdll.dll
 UNIXLIB   = ntdll.so
 IMPORTLIB = ntdll
@@ -30,6 +30,7 @@ SOURCES = \
 	math.c \
 	misc.c \
 	path.c \
+	pear_fex_memory.c \
 	printf.c \
 	process.c \
 	reg.c \
@@ -56,6 +57,10 @@ SOURCES = \
 	unix/file.c \
 	unix/loader.c \
 	unix/loadorder.c \
+	unix/pear_abi_fixture.c \
+	unix/pear_signal_fixture.c \
+	unix/pear_pe_arena.c \
+	unix/pear_fex_memory.c \
 	unix/process.c \
 	unix/registry.c \
 	unix/security.c \

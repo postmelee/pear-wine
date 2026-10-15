@@ -20,6 +20,9 @@
 
 #import "config.h"
 #import "macdrv.h"
+#include "stage5_protocol.h"
+#include "pear_macdrv_metal_v1.h"
+#include "stage5_census.h"
 
 #define GL_SILENCE_DEPRECATION
 #import <Metal/Metal.h>
@@ -252,6 +255,7 @@ static inline BOOL stage_manager_enabled(void)
     int backingSize[2];
 
     WineMetalView *_metalView;
+    bool _pearMetalOwner;
     NSMutableDictionary<NSNumber*, CALayerHost*>* _caLayerHosts;
 }
 
@@ -568,6 +572,7 @@ static inline BOOL stage_manager_enabled(void)
 
     - (WineMetalView*) newMetalViewWithDevice:(id<MTLDevice>)device
     {
+        if (_pearMetalOwner) return nil;
         if (_metalView) return _metalView;
 
         WineMetalView* view = [[WineMetalView alloc] initWithFrame:[self bounds] device:device];
@@ -581,6 +586,41 @@ static inline BOOL stage_manager_enabled(void)
         return _metalView;
     }
 
+    - (int32_t) pearOpenMetal:(id<MTLDevice>)device view:(WineMetalView**)out layer:(CAMetalLayer**)outLayer
+    {
+        WineMetalView *view=nil;
+        CAMetalLayer *layer=nil;
+        int32_t status=PEAR_METAL_OK;
+        if(_metalView || _pearMetalOwner) return PEAR_METAL_OWNER_CONFLICT;
+        @try {
+            view=[self newMetalViewWithDevice:device];
+            if(!view) return PEAR_METAL_VIEW;
+            CAMetalLayer *candidate=(CAMetalLayer*)view.layer;
+            if(![candidate isKindOfClass:[CAMetalLayer class]]) status=PEAR_METAL_LAYER;
+            else {
+                layer=[candidate retain];layer.allowsNextDrawableTimeout=YES;
+                layer.drawableSize=CGSizeMake(view.bounds.size.width*layer.contentsScale,view.bounds.size.height*layer.contentsScale);
+                _pearMetalOwner=true;*out=view;*outLayer=layer;return PEAR_METAL_OK;
+            }
+        } @catch(NSException *exception) { (void)exception;status=PEAR_METAL_NATIVE_EXCEPTION; }
+        if(view) { [view removeFromSuperview];[view release]; }
+        if(layer) [layer release];
+        *out=NULL;*outLayer=NULL;return status;
+    }
+    - (void) pearResizeMetal
+    {
+        if(_pearMetalOwner && _metalView) {
+            CAMetalLayer *layer=(CAMetalLayer*)_metalView.layer;
+            layer.drawableSize=CGSizeMake(self.bounds.size.width*layer.contentsScale,self.bounds.size.height*layer.contentsScale);
+        }
+    }
+    - (void) pearCloseMetal:(WineMetalView*)view
+    {
+        if(_pearMetalOwner && _metalView==view) {
+            _pearMetalOwner=false; [view removeFromSuperview];
+        }
+        [view release]; /* original creation, exactly once per attachment */
+    }
     - (void) addCALayerHostViewWithContextId:(CAContextID)contextId
     {
         if (!_caLayerHosts)
@@ -727,8 +767,7 @@ static inline BOOL stage_manager_enabled(void)
             if (!view->_cachedHasGLDescendantValid || view->_cachedHasGLDescendant)
                 [self invalidateHasGLDescendant];
         }
-        if (subview == _metalView)
-            _metalView = nil;
+        if (subview == _metalView) { _metalView = nil; _pearMetalOwner = false; }
         [super willRemoveSubview:subview];
     }
 
@@ -999,6 +1038,8 @@ static inline BOOL stage_manager_enabled(void)
 
     - (void) dealloc
     {
+        uintptr_t pear_identity = (uintptr_t)self;
+        pear_stage5_window_diagnostic_deallocating((void *)pear_identity);
         [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
         [[NSNotificationCenter defaultCenter] removeObserver:self];
         [queue release];
@@ -1006,6 +1047,7 @@ static inline BOOL stage_manager_enabled(void)
         [latentParentWindow release];
         [contentViewMaskLayer release];
         [super dealloc];
+        pear_stage5_window_deallocated((void *)pear_identity);
     }
 
     - (BOOL) preventResizing
@@ -2488,8 +2530,11 @@ static inline BOOL stage_manager_enabled(void)
         if (!drawnSinceShown)
         {
             drawnSinceShown = YES;
+            pear_stage5_census_draw((uintptr_t)self,PEAR_S5_DRAW_SCHEDULED,closing);
             dispatch_async(dispatch_get_main_queue(), ^{
+                pear_stage5_census_draw((uintptr_t)self,PEAR_S5_DRAW_ENTERED,closing);
                 [self checkTransparency];
+                pear_stage5_census_draw((uintptr_t)self,PEAR_S5_DRAW_COMPLETED,closing);
             });
         }
     }
@@ -2862,6 +2907,7 @@ static inline BOOL stage_manager_enabled(void)
 
     - (BOOL)windowShouldClose:(id)sender
     {
+        pear_stage5_window_close_requested(self);
         macdrv_event* event = macdrv_create_event(WINDOW_CLOSE_REQUESTED, self);
         [queue postEvent:event];
         macdrv_release_event(event);
@@ -3142,11 +3188,13 @@ WineWindow *macdrv_create_cocoa_window(const struct macdrv_window_features* wf,
 {
     __block WineWindow* window;
 
+    pear_stage5_window_create_begin(hwnd);
     OnMainThread(^{
         window = [[WineWindow createWindowWithFeatures:wf
                                            windowFrame:NSRectFromCGRect(cgrect_mac_from_win(frame))
                                                   hwnd:hwnd
                                                  queue:queue] retain];
+        pear_stage5_window_created(hwnd, window, queue);
     });
 
     return window;
@@ -3161,12 +3209,15 @@ void macdrv_destroy_cocoa_window(WineWindow *window)
 {
 @autoreleasepool
 {
+    pear_stage5_window_destroy_begin(window);
     OnMainThread(^{
         window.closing = TRUE;
         [window doOrderOut];
         [window close];
+        pear_stage5_window_cocoa_destroyed(window);
     });
     [window.queue discardEventsMatchingMask:-1 forWindow:window];
+    pear_stage5_window_discarded(window);
     [window release];
 }
 }
@@ -3225,6 +3276,7 @@ void macdrv_set_cocoa_window_title(WineWindow *window, const unsigned short* tit
         titleString = @"";
     OnMainThreadAsync(^{
         [window setTitle:titleString];
+        pear_stage5_window_title_changed(window, titleString);
         if ([window isOrderedIn] && ![window isExcludedFromWindowsMenu])
             [NSApp changeWindowsItem:window title:titleString filename:NO];
     });
@@ -3542,6 +3594,7 @@ void macdrv_set_view_frame(WineContentView *view, CGRect rect)
                 [view setFrame:newFrame];
             [view setNeedsDisplay:YES];
             [view wine_setBackingSize:(int[2]){ 0 }];
+            [view pearResizeMetal];
             [(WineWindow*)[view window] updateForGLSubviews];
         }
     });
@@ -3639,6 +3692,13 @@ void macdrv_remove_view_opengl_context(WineContentView *view, WineOpenGLContext 
 }
 }
 
+void macdrv_pear_metal_retain_view(WineContentView *view) { [view retain]; }
+int32_t macdrv_pear_metal_open(WineContentView *view,id<MTLDevice> device,WineMetalView **out,CAMetalLayer **layer)
+{
+    *out=NULL; *layer=NULL;
+    return [view pearOpenMetal:device view:out layer:layer];
+}
+void macdrv_pear_metal_close(WineContentView *view,WineMetalView *metal) { [view pearCloseMetal:metal]; }
 id<MTLDevice> macdrv_create_metal_device(void)
 {
 @autoreleasepool

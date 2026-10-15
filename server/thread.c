@@ -19,6 +19,7 @@
  */
 
 #include "config.h"
+#include "wine/pear_bootstrap.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -1740,6 +1741,7 @@ DECL_HANDLER(init_first_thread)
     reply->session_id   = process->session_id;
     reply->info_size    = get_process_startup_info_size( process );
     reply->server_start = server_start_time;
+    pear_bootstrap_handshake( "server", req->unix_pid, server_start_time );
     set_reply_data( supported_machines,
                     min( supported_machines_count * sizeof(unsigned short), get_reply_max_size() ));
 

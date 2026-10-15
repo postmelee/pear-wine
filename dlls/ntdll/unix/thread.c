@@ -1514,11 +1514,16 @@ void abort_process( int status )
 /***********************************************************************
  *           exit_thread
  */
+extern void pear_stage4_thread_exit(struct thread_data *);
+
 static DECLSPEC_NORETURN void exit_thread( int status )
 {
     static void *prev_data;
     struct thread_data *data;
 
+#if defined(__APPLE__) && defined(__aarch64__)
+    pear_stage4_thread_exit(get_thread_data());
+#endif
     pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
 
     if (InterlockedDecrement( &nb_threads ) <= 0) exit_process( status );

@@ -39,12 +39,61 @@ enum {
 };
 
 
-struct cocoa_app_startup_info {
+/* The caller and an entered callback own independent references.  The
+   condition protects success; it is never held during AppKit
+   initialization or while running the application event loop. */
+struct cocoa_app_startup_request {
+    unsigned int       refs;
     NSConditionLock*    lock;
     unsigned long long  tickcount;
     uint64_t            uptime_ns;
     BOOL                success;
 };
+
+/* CF may retain a selected source until its perform callback returns, even
+   after invalidation.  Transfer the request out before entering NSApp.run so
+   that only this empty envelope can remain owned by the active CF frame. */
+struct cocoa_app_startup_source {
+    unsigned int refs;
+    struct cocoa_app_startup_request* request;
+};
+
+static struct cocoa_app_startup_request* retain_startup_request(struct cocoa_app_startup_request* request)
+{
+    __atomic_add_fetch(&request->refs, 1, __ATOMIC_RELAXED);
+    return request;
+}
+
+static void release_startup_request(struct cocoa_app_startup_request* request)
+{
+    if (request && !__atomic_sub_fetch(&request->refs, 1, __ATOMIC_ACQ_REL))
+    {
+        [request->lock release];
+        free(request);
+    }
+}
+
+static struct cocoa_app_startup_request* claim_startup_request(struct cocoa_app_startup_source* source)
+{
+    return __atomic_exchange_n(&source->request, NULL, __ATOMIC_ACQ_REL);
+}
+
+static const void* retain_startup_source(const void* info)
+{
+    struct cocoa_app_startup_source* source = (void*)info;
+    __atomic_add_fetch(&source->refs, 1, __ATOMIC_RELAXED);
+    return source;
+}
+
+static void release_startup_source(const void* info)
+{
+    struct cocoa_app_startup_source* source = (void*)info;
+    if (!__atomic_sub_fetch(&source->refs, 1, __ATOMIC_ACQ_REL))
+    {
+        release_startup_request(claim_startup_request(source));
+        free(source);
+    }
+}
 
 
 /***********************************************************************
@@ -64,9 +113,11 @@ struct cocoa_app_startup_info {
  */
 static void run_cocoa_app(void* info)
 {
-    struct cocoa_app_startup_info* startup_info = info;
-    NSConditionLock* lock = startup_info->lock;
-    BOOL created_app = FALSE;
+    struct cocoa_app_startup_request* request = claim_startup_request(info);
+    BOOL created_app = FALSE, success = FALSE;
+
+    /* A timed-out caller may have detached the unclaimed request. */
+    if (!request) return;
 
     @autoreleasepool
     {
@@ -80,19 +131,19 @@ static void run_cocoa_app(void* info)
         {
             WineApplicationController* controller = [WineApplicationController sharedController];
             [NSApp setWineController:controller];
-            [controller computeEventTimeAdjustmentFromTicks:startup_info->tickcount uptime:startup_info->uptime_ns];
-            startup_info->success = TRUE;
+            [controller computeEventTimeAdjustmentFromTicks:request->tickcount uptime:request->uptime_ns];
+            success = TRUE;
         }
 
-        /* Retain the lock while we're using it, so macdrv_start_cocoa_app()
-           doesn't deallocate it in the middle of us unlocking it. */
-        [lock retain];
-        [lock lock];
-        [lock unlockWithCondition:COCOA_APP_RUNNING];
-        [lock release];
+        [request->lock lock];
+        request->success = success;
+        [request->lock unlockWithCondition:COCOA_APP_RUNNING];
+        release_startup_request(request);
     }
 
-    if (created_app && startup_info->success)
+    /* Preserve the existing local run decision even if the caller timed out
+       while AppKit initialization was in flight.  No caller storage is used. */
+    if (created_app && success)
     {
         @autoreleasepool
         {
@@ -115,8 +166,9 @@ int macdrv_start_cocoa_app(unsigned long long tickcount)
 @autoreleasepool
 {
     int ret = -1;
-    CFRunLoopSourceRef source;
-    struct cocoa_app_startup_info startup_info;
+    CFRunLoopSourceRef source = NULL;
+    struct cocoa_app_startup_request* request = NULL;
+    struct cocoa_app_startup_source* envelope = NULL;
     uint64_t uptime_mach = mach_absolute_time();
     mach_timebase_info_data_t mach_timebase;
     NSDate* timeLimit;
@@ -128,35 +180,43 @@ int macdrv_start_cocoa_app(unsigned long long tickcount)
                              toTarget:[NSThread class]
                            withObject:nil];
 
-    startup_info.lock = [[NSConditionLock alloc] initWithCondition:COCOA_APP_NOT_RUNNING];
-    startup_info.tickcount = tickcount;
-    startup_info.success = FALSE;
+    if (!(request = calloc(1, sizeof(*request)))) goto done;
+    request->refs = 1;
+    if (!(request->lock = [[NSConditionLock alloc] initWithCondition:COCOA_APP_NOT_RUNNING])) goto done;
+    request->tickcount = tickcount;
 
     mach_timebase_info(&mach_timebase);
-    startup_info.uptime_ns = uptime_mach * mach_timebase.numer / mach_timebase.denom;
+    request->uptime_ns = uptime_mach * mach_timebase.numer / mach_timebase.denom;
+    if (!(timeLimit = [NSDate dateWithTimeIntervalSinceNow:5])) goto done;
 
-    timeLimit = [NSDate dateWithTimeIntervalSinceNow:5];
-
-    source_context.info = &startup_info;
+    if (!(envelope = calloc(1, sizeof(*envelope)))) goto done;
+    envelope->refs = 1;
+    envelope->request = retain_startup_request(request);
+    source_context.info = envelope;
+    source_context.retain = retain_startup_source;
+    source_context.release = release_startup_source;
     source_context.perform = run_cocoa_app;
-    source = CFRunLoopSourceCreate(NULL, 0, &source_context);
+    if (!(source = CFRunLoopSourceCreate(NULL, 0, &source_context))) goto done;
 
-    if (source && startup_info.lock && timeLimit)
+    CFRunLoopAddSource(CFRunLoopGetMain(), source, kCFRunLoopCommonModes);
+    CFRunLoopSourceSignal(source);
+    CFRunLoopWakeUp(CFRunLoopGetMain());
+
+    if ([request->lock lockWhenCondition:COCOA_APP_RUNNING beforeDate:timeLimit])
     {
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, kCFRunLoopCommonModes);
-        CFRunLoopSourceSignal(source);
-        CFRunLoopWakeUp(CFRunLoopGetMain());
-
-        if ([startup_info.lock lockWhenCondition:COCOA_APP_RUNNING beforeDate:timeLimit])
-        {
-            [startup_info.lock unlock];
-            ret = !startup_info.success;
-        }
+        ret = !request->success;
+        [request->lock unlock];
     }
+    /* A failed timed wait leaves ret at -1.  An entered callback may still
+       publish to its independently owned request, but cannot upgrade this
+       caller.  Do not acquire the condition again or join the callback. */
 
-    if (source)
-        CFRelease(source);
-    [startup_info.lock release];
+done:
+    if (source) CFRunLoopSourceInvalidate(source);
+    if (envelope) release_startup_request(claim_startup_request(envelope));
+    if (source) CFRelease(source);
+    if (envelope) release_startup_source(envelope);
+    release_startup_request(request);
     return ret;
 }
 }
