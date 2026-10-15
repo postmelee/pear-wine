@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "issue": 56,
+  "stage": 6,
+  "owner": "wine",
+  "accepted_source_checkpoint": "f403ac12954e1491078515272bab63e3f0f23e05",
+  "scope": "source_authority_and_development_handoff",
+  "changed_files_before_reports": [
+    {
+      "path": "README.md",
+      "name": "README.md",
+      "sha256": "8a0d65dd7cc8d921912ca4f19b3a2b7cda36218a70ffb2b385302c44d8d53db1",
+      "size_bytes": 7035
+    },
+    {
+      "path": "pear/README.md",
+      "name": "README.md",
+      "sha256": "d1be1c89106261f3e4b403ee1a9eb47cfe1edc069246d58cfd9583b78537e4f8",
+      "size_bytes": 8564
+    }
+  ],
+  "verification": {
+    "name": "stage6-wine-precommit-verification.json",
+    "sha256": "f0e0924d6bbdcb18b5fbdb687ab6ca1fdf408aaad3139026b4c0e4470a44b64f",
+    "size_bytes": 1532
+  },
+  "owner_acceptance": [
+    {
+      "owner_task": 10,
+      "name": "stage6-owner10-acceptance-thread.json",
+      "sha256": "e8831da76c17c5d45559ba0178a2f9290f11edc643ee87a273c4f34329a03363",
+      "size_bytes": 232114
+    },
+    {
+      "owner_task": 11,
+      "name": "stage6-owner11-acceptance-thread.json",
+      "sha256": "5f4373d34857bf4c8e690cb4b1450aec8088552d60b88140f45d54ab05a74b97",
+      "size_bytes": 256561
+    },
+    {
+      "owner_task": 12,
+      "name": "stage6-owner12-acceptance-thread.json",
+      "sha256": "f8af3e291e57063b18414a84b8871dcd4ded1d77bd447b8a4b3472312fff0815",
+      "size_bytes": 175988
+    }
+  ],
+  "source_execution_changed": false,
+  "selected_build_or_tool_pin_changed": false,
+  "runtime_activation": false,
+  "game_executed": false,
+  "additional_deletion": false,
+  "publication": "Private final branch refs are verified after the bundled commits and recorded in the Pear final handoff. No public Pear publication is performed."
+}
