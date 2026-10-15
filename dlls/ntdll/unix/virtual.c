@@ -27,6 +27,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <time.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -89,6 +91,7 @@
 #include "wine/list.h"
 #include "wine/rbtree.h"
 #include "unix_private.h"
+#include "pear_query_context.h"
 #include "pear_pe_arena.h"
 #include "wine/debug.h"
 
@@ -3975,6 +3978,99 @@ static void *alloc_virtual_heap( SIZE_T size )
 }
 #endif
 
+/* Optional D10 observation: no virtual-memory behavior or caller result changes. */
+static int pear_query_observe_enabled;
+static unsigned int pear_query_pid;
+static unsigned long long pear_query_ordinal;
+static unsigned int pear_query_records;
+_Static_assert( __atomic_always_lock_free( sizeof(pear_query_ordinal), 0 ), "query ordinal must be lock-free" );
+_Static_assert( __atomic_always_lock_free( sizeof(pear_query_records), 0 ), "query budget must be lock-free" );
+
+static void pear_init_query_observation(void)
+{
+    const char *value = getenv( "PEAR_QUERY_OBSERVE" );
+
+    if (!value || !strcmp( value, "0" )) return;
+    if (strcmp( value, "1" ))
+    {
+        fprintf( stderr, "wine: invalid PEAR_QUERY_OBSERVE (expected 0 or 1).\n" );
+        exit( 1 );
+    }
+    /* Reuse the existing bootstrap PID only to select diagnostic output.
+     * This does not alter memory ownership or confer execution authority. */
+    {
+        const char *owner = getenv( "PEAR_FEX_MEMORY_OWNER_PID" );
+        char *end = NULL;
+        unsigned long long selected;
+        int saved_errno = errno, invalid;
+
+        errno = 0;
+        selected = owner ? strtoull( owner, &end, 10 ) : 0;
+        invalid = errno || !owner || !*owner || *owner < '1' || *owner > '9' ||
+                  !end || *end || selected > INT_MAX || selected <= 1;
+        errno = saved_errno;
+        if (invalid)
+        {
+            fprintf( stderr, "wine: query observation requires a valid bootstrap owner PID.\n" );
+            exit( 1 );
+        }
+        pear_query_pid = getpid();
+        pear_query_observe_enabled = selected == pear_query_pid;
+    }
+}
+
+/* Called after get_basic_memory_info returns and its virtual mutex is released.
+ * Ordinals count completed self queries globally; sparse records are not a full
+ * timeline. Saturation prevents wraparound from creating new observations. */
+static void pear_observe_basic_query( const void *addr, unsigned int status,
+                                      const MEMORY_BASIC_INFORMATION *info )
+{
+    unsigned long long ordinal;
+    unsigned int slot, valid = !status;
+    int saved_errno, length, clock_ok, thread_ok;
+    struct timespec now = {0};
+    uint64_t thread = 0;
+    MEMORY_BASIC_INFORMATION result = {0};
+    char line[512];
+    struct pear_query_context context;
+
+    if (!pear_query_observe_enabled || (unsigned int)getpid() != pear_query_pid) return;
+    saved_errno = errno;
+    ordinal = __atomic_load_n( &pear_query_ordinal, __ATOMIC_RELAXED );
+    do
+    {
+        if (ordinal == ULLONG_MAX) goto done;
+    } while (!__atomic_compare_exchange_n( &pear_query_ordinal, &ordinal, ordinal + 1,
+                                           1, __ATOMIC_RELAXED, __ATOMIC_RELAXED ));
+    ordinal++;
+    if (ordinal > 16 && (ordinal & (ordinal - 1))) goto done;
+    slot = __atomic_load_n( &pear_query_records, __ATOMIC_RELAXED );
+    do
+    {
+        if (slot >= 80) goto done;
+    } while (!__atomic_compare_exchange_n( &pear_query_records, &slot, slot + 1,
+                                           1, __ATOMIC_RELAXED, __ATOMIC_RELAXED ));
+
+    pear_get_query_context( &context );
+    /* A failed query may leave its output pointer invalid or untouched. */
+    if (valid) result = *info;
+    clock_ok = !clock_gettime( CLOCK_MONOTONIC, &now );
+    thread_ok = !pthread_threadid_np( NULL, &thread );
+    length = snprintf( line, sizeof(line),
+        "PEAR_QUERY2 pid=%u seq=%llu slot=%u tid=%llu thread_ok=%d sec=%llu nsec=%lu clock_ok=%d "
+        "addr=%llx status=%08x valid=%u base=%llx size=%llx state=%x protect=%x type=%x ctx=%u syscall=%x pc=%llx lr=%llx\n",
+        pear_query_pid, ordinal, slot, (unsigned long long)thread, thread_ok,
+        (unsigned long long)now.tv_sec, (unsigned long)now.tv_nsec, clock_ok,
+        (unsigned long long)(UINT_PTR)addr, status, valid,
+        (unsigned long long)(UINT_PTR)result.BaseAddress, (unsigned long long)result.RegionSize,
+        (unsigned int)result.State, (unsigned int)result.Protect, (unsigned int)result.Type,
+        (unsigned int)context.available, (unsigned int)context.syscall_id,
+        (unsigned long long)context.pc, (unsigned long long)context.lr );
+    if (length > 0 && length < (int)sizeof(line)) write( 2, line, length );
+done:
+    errno = saved_errno;
+}
+
 /***********************************************************************
  *           virtual_init
  */
@@ -3984,6 +4080,7 @@ void virtual_init(void)
     int i;
     pthread_mutexattr_t attr;
 
+    pear_init_query_observation();
     pthread_key_create( &thread_data_key, NULL );
     pthread_mutexattr_init( &attr );
     pthread_mutexattr_settype( &attr, PTHREAD_MUTEX_RECURSIVE );
@@ -6550,7 +6647,9 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
     switch(info_class)
     {
         case MemoryBasicInformation:
-            return get_basic_memory_info( process, addr, buffer, len, res_len );
+            status = get_basic_memory_info( process, addr, buffer, len, res_len );
+            if (process == NtCurrentProcess()) pear_observe_basic_query( addr, status, buffer );
+            return status;
 
         case MemoryWorkingSetExInformation:
             return get_working_set_ex( process, addr, buffer, len, res_len );

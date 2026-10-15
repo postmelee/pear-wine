@@ -5,6 +5,9 @@
 #pragma makedep unix
 #endif
 #include <errno.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdatomic.h>
@@ -12,6 +15,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "pear_fex_memory_private.h"
+#include "PearAbortObservation.h"
 
 #define PAGE PEAR_FEX_MEMORY_PAGE_BYTES
 #define SHARED_UNIT UINT64_C(16777216)
@@ -29,6 +33,9 @@ struct owner_executor {
     uint64_t id, allocation_id, generation, epoch, continuation;
     uint32_t role, state;
     pthread_t thread;
+    /* Private diagnostic identity, never part of the owner wire ABI. */
+    uint64_t diagnostic_host, diagnostic_start_lo, diagnostic_start_hi;
+    unsigned diagnostic_valid;
 };
 struct owner_continuation {
     uint64_t id, executor, allocation_id, generation, epoch, offset;
@@ -191,6 +198,118 @@ static int active(uint64_t writer)
             (owner.executors[i].state == PEAR_FEX_NATIVE_PINNED && owner.executors[i].id != writer)) return 1;
     return 0;
 }
+/* Opt-in is sampled before initialization locks. The counter and snapshot
+ * copy use the existing owner mutex; output uses only the dispatch-local copy. */
+#define TIMEOUT_OBSERVATION_LIMIT 8
+struct timeout_row {
+    uint64_t id, host, start_lo, start_hi;
+    uint32_t state, role;
+    unsigned identity_valid;
+};
+struct timeout_snapshot {
+    uint64_t writer;
+    unsigned present, sequence, opcode, active, pinned, count, truncated;
+    struct timeout_row rows[TIMEOUT_OBSERVATION_LIMIT];
+};
+static unsigned timeout_observation_enabled, timeout_observation_count;
+static unsigned thread_observation_enabled;
+static unsigned abort_observation_enabled, abort_observation_count;
+static void emit_abort(const struct PearAbortRecord *d, unsigned present) {
+    char buffer[1536]; int saved_errno=errno, n;
+    if (!present) return;
+    n=pear_abort_format(buffer,sizeof(buffer),3,d);
+    if (n>0 && (size_t)n<sizeof(buffer)) (void)write(STDERR_FILENO,buffer,n);
+    errno=saved_errno;
+}
+
+static void capture_timeout(struct timeout_snapshot *s, unsigned opcode)
+{
+    unsigned i;
+    if (!timeout_observation_enabled || timeout_observation_count >= TIMEOUT_OBSERVATION_LIMIT) return;
+    s->present = 1; s->sequence = timeout_observation_count++;
+    s->writer = owner.write.executor; s->opcode = opcode;
+    for (i = 0; i < PEAR_FEX_MEMORY_MAX_EXECUTORS; ++i)
+    {
+        const struct owner_executor *x = &owner.executors[i];
+        if (x->state == PEAR_FEX_MANAGED_ACTIVE) ++s->active;
+        else if (x->state == PEAR_FEX_NATIVE_PINNED && x->id != s->writer) ++s->pinned;
+        else continue;
+        if (s->count < TIMEOUT_OBSERVATION_LIMIT)
+        {
+            struct timeout_row *row = &s->rows[s->count++];
+            row->id = x->id; row->state = x->state; row->role = x->role;
+            row->host = x->diagnostic_host; row->start_lo = x->diagnostic_start_lo;
+            row->start_hi = x->diagnostic_start_hi; row->identity_valid = x->diagnostic_valid;
+        }
+        else ++s->truncated;
+    }
+}
+static void emit_timeout(const struct timeout_snapshot *s)
+{
+    char buffer[4096];
+    int saved_errno = errno, n;
+    unsigned i;
+    size_t used;
+    if (!s->present) return;
+    n = snprintf(buffer, sizeof(buffer),
+                 "PEAR_OWNER_TIMEOUT seq=%u opcode=%u writer=%" PRIu64 " active=%u pinned=%u rows=%u truncated=%u\n",
+                 s->sequence, s->opcode, s->writer, s->active, s->pinned, s->count, s->truncated);
+    if (n < 0 || (size_t)n >= sizeof(buffer)) goto done;
+    used = n;
+    for (i = 0; i < s->count; ++i)
+    {
+        const struct timeout_row *row = &s->rows[i];
+        n = snprintf(buffer + used, sizeof(buffer) - used,
+                     "PEAR_OWNER_ROW seq=%u index=%u id=%" PRIu64 " state=%u role=%u\n",
+                     s->sequence, i, row->id, row->state, row->role);
+        if (n < 0 || (size_t)n >= sizeof(buffer) - used) goto done;
+        used += n;
+        if (thread_observation_enabled)
+        {
+            n = snprintf(buffer + used, sizeof(buffer) - used,
+                         "PEAR_OWNER_THREAD seq=%u index=%u id=%" PRIu64 " valid=%u host=%" PRIu64
+                         " register_lo=%" PRIu64 " register_hi=%" PRIu64 "\n",
+                         s->sequence, i, row->id, row->identity_valid, row->host, row->start_lo, row->start_hi);
+            if (n < 0 || (size_t)n >= sizeof(buffer) - used) goto done;
+            used += n;
+        }
+    }
+    /* A short or failed write is incomplete evidence, never an owner error. */
+    (void)write(STDERR_FILENO, buffer, used);
+ done:
+    errno = saved_errno;
+}
+
+/* Registration identity is copied at successful commit, emitted after unlock.
+ * This reuses the already captured opt-in identity and never adds a host query. */
+#define REGISTRATION_OBSERVATION_LIMIT 128
+struct registration_snapshot {
+    uint64_t pid, id, host, start_lo, start_hi;
+    unsigned present, sequence, role, valid;
+};
+static unsigned registration_observation_count;
+static void capture_registration(struct registration_snapshot *s, const struct owner_executor *x)
+{
+    if (!thread_observation_enabled || registration_observation_count >= REGISTRATION_OBSERVATION_LIMIT) return;
+    s->present = 1; s->sequence = registration_observation_count++;
+    s->pid = owner.backing.owner_pid; s->id = x->id; s->role = x->role;
+    s->valid = x->diagnostic_valid; s->host = x->diagnostic_host;
+    s->start_lo = x->diagnostic_start_lo; s->start_hi = x->diagnostic_start_hi;
+}
+static void emit_registration(const struct registration_snapshot *s)
+{
+    char buffer[512];
+    int saved_errno = errno, n;
+    if (!s->present) return;
+    n = snprintf(buffer, sizeof(buffer),
+                 "PEAR_OWNER_REGISTER1 pid=%" PRIu64 " seq=%u id=%" PRIu64 " role=%u valid=%u host=%" PRIu64
+                 " register_lo=%" PRIu64 " register_hi=%" PRIu64 "\n",
+                 s->pid, s->sequence, s->id, s->role, s->valid, s->host, s->start_lo, s->start_hi);
+    /* No retry, grant or dispatch error is created for incomplete output. */
+    if (n > 0 && (size_t)n < sizeof(buffer)) (void)write(STDERR_FILENO, buffer, n);
+    errno = saved_errno;
+}
+
 static int pins(const struct owner_extent *e)
 {
     unsigned i;
@@ -230,7 +349,8 @@ static int wait_condition(const struct timespec *deadline)
 #endif
     return status;
 }
-static uint32_t wait_native(struct pear_fex_memory_error *native_error)
+static uint32_t wait_native(struct pear_fex_memory_error *native_error,
+                            struct timeout_snapshot *snapshot, unsigned opcode)
 {
     struct timespec deadline;
     int error;
@@ -238,7 +358,7 @@ static uint32_t wait_native(struct pear_fex_memory_error *native_error)
     while (active(owner.write.executor))
     {
         error = wait_condition(&deadline);
-        if (error == ETIMEDOUT) return PEAR_FEX_QUIESCENCE_TIMEOUT;
+        if (error == ETIMEDOUT) { capture_timeout(snapshot, opcode); return PEAR_FEX_QUIESCENCE_TIMEOUT; }
         if (error) { native_error->domain = PEAR_FEX_ERROR_ERRNO; native_error->code = error; return PEAR_FEX_NATIVE_FAILURE; }
     }
     return PEAR_FEX_OK;
@@ -359,6 +479,9 @@ uint32_t pear_fex_memory_initialize(const struct pear_fex_memory_backend *backen
                                     struct pear_fex_memory_error *error)
 {
     uint32_t status = PEAR_FEX_OK;
+    const char *observation;
+    unsigned enabled, thread_enabled, abort_enabled;
+    int saved_errno;
     struct pear_fex_memory_backing backing = {0};
     if (!error) return PEAR_FEX_INVALID_REQUEST;
     memset(error, 0, sizeof(*error));
@@ -366,6 +489,14 @@ uint32_t pear_fex_memory_initialize(const struct pear_fex_memory_backend *backen
         !backend->view || !backend->role || !backend->entry) return PEAR_FEX_INVALID_REQUEST;
     if (atomic_load_explicit(&owner.initialized, memory_order_acquire) &&
         owner.backing.owner_pid != (uint64_t)getpid()) return PEAR_FEX_STALE_IDENTITY;
+    saved_errno = errno;
+    observation = getenv("PEAR_FEX_OWNER_OBSERVE");
+    enabled = observation && !strcmp(observation, "1");
+    observation = getenv("PEAR_FEX_THREAD_OBSERVE");
+    thread_enabled = observation && !strcmp(observation, "1");
+    observation = getenv("PEAR_FEX_ABORT_OBSERVE");
+    abort_enabled = observation && !strcmp(observation, "1");
+    errno = saved_errno;
     pthread_mutex_lock(&owner_mutex);
     if (owner.initialized)
     {
@@ -388,6 +519,9 @@ uint32_t pear_fex_memory_initialize(const struct pear_fex_memory_backend *backen
     { status = PEAR_FEX_NATIVE_FAILURE; goto done; }
     owner.backend = *backend; owner.backing = backing;
     owner.backing.capabilities = (backing.capabilities & ~PEAR_FEX_CHECKED_EC_BITMAP) | PEAR_FEX_GLOBAL_GATE;
+    timeout_observation_enabled = enabled;
+    thread_observation_enabled = enabled && thread_enabled;
+    abort_observation_enabled = enabled && thread_enabled && abort_enabled;
     atomic_store_explicit(&owner.initialized, 1, memory_order_release);
  done:
     pthread_mutex_unlock(&owner_mutex);
@@ -418,6 +552,12 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
     struct pear_fex_memory_error error = {0};
     uint32_t status = PEAR_FEX_OK;
     unsigned i;
+    struct timeout_snapshot snapshot = {0};
+    struct registration_snapshot registration = {0};
+    struct PearAbortRecord d = {0};
+    unsigned abort_reason=0, abort_previous=0, abort_previous_known=0, abort_present=0;
+    uint64_t diagnostic_host = 0, diagnostic_lo = 0, diagnostic_hi = 0;
+    unsigned diagnostic_valid = 0;
     if (!r) return PEAR_FEX_INVALID_REQUEST;
     fail(r, PEAR_FEX_OK, NULL);
     if (!q) return fail(r, PEAR_FEX_INVALID_REQUEST, NULL);
@@ -425,11 +565,30 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
     if (!shape(q)) return fail(r, PEAR_FEX_INVALID_REQUEST, NULL);
     if (atomic_load_explicit(&owner.initialized, memory_order_acquire) &&
         owner.backing.owner_pid != (uint64_t)getpid()) return fail(r, PEAR_FEX_STALE_IDENTITY, NULL);
+    /* Query only our registering thread outside the owner lock. Initialization
+     * publishes the immutable opt-in with owner.initialized. Query failure is
+     * unknown diagnostic identity and cannot change the dispatch result. */
+    if (atomic_load_explicit(&owner.initialized, memory_order_acquire) &&
+        thread_observation_enabled && q->opcode == PEAR_FEX_EXECUTOR_REGISTER)
+    {
+        struct timespec lo = {0}, hi = {0};
+        int saved_errno = errno;
+        if (!clock_gettime(CLOCK_MONOTONIC, &lo) &&
+            !pthread_threadid_np(NULL, &diagnostic_host) && diagnostic_host &&
+            !clock_gettime(CLOCK_MONOTONIC, &hi))
+        {
+            diagnostic_lo = (uint64_t)lo.tv_sec * UINT64_C(1000000000) + lo.tv_nsec;
+            diagnostic_hi = (uint64_t)hi.tv_sec * UINT64_C(1000000000) + hi.tv_nsec;
+            diagnostic_valid = diagnostic_lo && diagnostic_hi >= diagnostic_lo;
+        }
+        if (!diagnostic_valid) diagnostic_host = diagnostic_lo = diagnostic_hi = 0;
+        errno = saved_errno;
+    }
     pthread_mutex_lock(&owner_mutex);
     if (!owner.initialized) { status = PEAR_FEX_UNAVAILABLE; goto done; }
     if (q->owner_pid != owner.backing.owner_pid || q->owner_pid != (uint64_t)getpid())
     { status = PEAR_FEX_STALE_IDENTITY; goto done; }
-    if (owner.quarantined) { status = PEAR_FEX_QUARANTINED; goto done; }
+    if (owner.quarantined) { abort_reason=1; status = PEAR_FEX_QUARANTINED; goto done; }
     if (q->opcode == PEAR_FEX_OBSERVE_METADATA)
     {
         struct pear_fex_memory_metadata metadata = {0};
@@ -450,7 +609,7 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
     if (!q->allocation_id && (q->generation || q->extent_offset ||
         (q->opcode != PEAR_FEX_RESERVE && (q->allocation_class || q->extent_size))))
     { status = PEAR_FEX_INVALID_REQUEST; goto done; }
-    if (e && e->quarantined) { status = PEAR_FEX_QUARANTINED; goto done; }
+    if (e && e->quarantined) { abort_reason=2; status = PEAR_FEX_QUARANTINED; goto done; }
     if (q->continuation_id && (!x || !e || !(c = continuation(q->continuation_id, x, e))))
     { status = PEAR_FEX_STALE_IDENTITY; goto done; }
     if (q->opcode != PEAR_FEX_QUERY && q->opcode != PEAR_FEX_EXECUTOR_REGISTER && !x)
@@ -469,7 +628,10 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
         if (i == PEAR_FEX_MEMORY_MAX_EXECUTORS || !fresh(&owner.identity)) { status = PEAR_FEX_CAPACITY; break; }
         x = &owner.executors[i]; memset(x, 0, sizeof(*x));
         x->id = owner.identity; x->thread = pthread_self(); x->role = q->ec_role; x->state = PEAR_FEX_NATIVE_IDLE;
-        reply(r, NULL, x, 0); break;
+        x->diagnostic_host = diagnostic_host; x->diagnostic_start_lo = diagnostic_lo;
+        x->diagnostic_start_hi = diagnostic_hi; x->diagnostic_valid = diagnostic_valid;
+        reply(r, NULL, x, 0);
+        capture_registration(&registration, x); break;
     case PEAR_FEX_RESERVE:
     {
         uint64_t unit, offset, mask;
@@ -544,7 +706,7 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
         offset = e->offset + (q->operation_offset & ~(PAGE - 1));
         end = e->offset + ((q->operation_offset + q->operation_size + PAGE - 1) & ~(PAGE - 1));
         owner.gate_closed = 1; owner.write.executor = x->id;
-        if ((status = wait_native(&error)) != PEAR_FEX_OK) { open_gate(); break; }
+        if ((status = wait_native(&error, &snapshot, q->opcode)) != PEAR_FEX_OK) { open_gate(); break; }
         if (!observe(offset, end - offset, &error)) { open_gate(); status = PEAR_FEX_NATIVE_FAILURE; break; }
         memcpy(owner.old_permissions, owner.permissions, sizeof(owner.permissions));
         owner.write = (struct owner_write){x->id, e->id, e->generation, fresh(&owner.epoch), offset, end-offset, e->state};
@@ -568,14 +730,16 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
         { status = PEAR_FEX_STALE_IDENTITY; break; }
         if (q->opcode == PEAR_FEX_ABORT_WRITE)
         {
+            abort_previous=owner.write.previous_state; abort_previous_known=1;
             if (owner.write.previous_state != PEAR_FEX_RESERVED_NONE)
             {
+                abort_reason=3;
                 struct pear_fex_memory_error none_error = {0};
                 if (!protect(e->offset, e->size, PEAR_FEX_PROTECTION_NONE, &none_error)) error = none_error;
                 quarantine(e); status = PEAR_FEX_QUARANTINED; break;
             }
             memset((void *)(uintptr_t)(owner.backing.private_base + owner.write.offset), 0, owner.write.size);
-            if (!restore(&error)) { quarantine(e); status = PEAR_FEX_QUARANTINED; break; }
+            if (!restore(&error)) { abort_reason=4; quarantine(e); status = PEAR_FEX_QUARANTINED; break; }
             e->state = PEAR_FEX_RESERVED_NONE;
             reply(r, e, x, q->continuation_id); open_gate(); break;
         }
@@ -598,7 +762,7 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
             owner.gate_closed || (x->state != PEAR_FEX_NATIVE_IDLE && x->state != PEAR_FEX_NATIVE_PINNED))
         { status = PEAR_FEX_INVALID_REQUEST; break; }
         owner.gate_closed = 1; owner.write.executor = x->id;
-        if ((status = wait_native(&error)) != PEAR_FEX_OK) { open_gate(); break; }
+        if ((status = wait_native(&error, &snapshot, q->opcode)) != PEAR_FEX_OK) { open_gate(); break; }
         if (pins(e)) { open_gate(); status = PEAR_FEX_UNAVAILABLE; break; }
         e->state = PEAR_FEX_RETIRING;
         if (e->role == PEAR_FEX_ROLE_ARM64EC && owner.backend.ec_register(e->offset, e->size, 0, &error))
@@ -775,11 +939,33 @@ uint32_t pear_fex_memory_dispatch(const struct pear_fex_memory_request *q,
             { status = PEAR_FEX_INVALID_REQUEST; goto done; }
         for (i = 0; i < PEAR_FEX_MEMORY_MAX_DESCRIPTORS; ++i)
             if (owner.descriptors[i].executor == x->id) { status = PEAR_FEX_INVALID_REQUEST; goto done; }
+        x->diagnostic_host = x->diagnostic_start_lo = x->diagnostic_start_hi = 0;
+        x->diagnostic_valid = 0;
         x->state = PEAR_FEX_UNREGISTERED; reply(r, NULL, x, 0); break;
     default: status = PEAR_FEX_INVALID_REQUEST;
     }
  done:
+    if (abort_observation_enabled && q->opcode==PEAR_FEX_ABORT_WRITE &&
+        status==PEAR_FEX_QUARANTINED && abort_reason && abort_observation_count<8) {
+        ++abort_observation_count; abort_present=1;
+    d.pid = (*q).owner_pid;
+    d.executor = (*q).executor_id;
+    d.allocation = (*q).allocation_id;
+    d.generation = (*q).generation;
+    d.extent = (*q).extent_offset;
+    d.size = (*q).extent_size;
+    d.epoch = (*q).write_epoch;
+    d.expected = (*q).expected_state;
+    d.aclass = (*q).allocation_class;
+    d.role = (*q).ec_role;
+    d.continuation = (*q).continuation_id;
+        d.reason=abort_reason; d.previous=abort_previous; d.previous_known=abort_previous_known;
+        d.status=status; d.domain=error.domain; d.code=error.domain ? error.code : 0;
+    }
     if (status != PEAR_FEX_OK) fail(r, status, error.domain ? &error : NULL);
     pthread_mutex_unlock(&owner_mutex);
+    emit_timeout(&snapshot);
+    emit_registration(&registration);
+    emit_abort(&d,abort_present);
     return status;
 }

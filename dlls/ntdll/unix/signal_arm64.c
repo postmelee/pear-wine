@@ -61,6 +61,7 @@
 #include "winternl.h"
 #include "wine/asm.h"
 #include "unix_private.h"
+#include "pear_query_context.h"
 #include "wine/debug.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(seh);
@@ -223,6 +224,27 @@ struct syscall_frame
 };
 
 C_ASSERT( sizeof( struct syscall_frame ) == 0x330 );
+
+/* Read only Wine's current native syscall frame; never follow guest pointers. */
+void pear_get_query_context( struct pear_query_context *context )
+{
+    struct thread_data *data = get_thread_data();
+    struct syscall_frame *frame;
+    char stack_marker;
+
+    memset( context, 0, sizeof(*context) );
+    if (!data || !data->teb || !(frame = get_syscall_frame( data )) ||
+        !is_inside_syscall( data, (ULONG_PTR)&stack_marker )) return;
+    /* The paired PE's native and EC NtQueryVirtualMemory stubs use service 0x23.
+     * Other active calls cannot provide this diagnostic's query context. */
+    if (frame->syscall_id != 0x23 || !frame->pc || !frame->lr) return;
+    context->pc = frame->pc;
+    context->lr = frame->lr;
+    context->syscall_id = frame->syscall_id;
+    context->available = 1;
+}
+
+
 
 
 #define ESR_ELx_EC(esr)                 (((DWORD64)(esr) >> 26) & 0x3f)
@@ -1728,6 +1750,23 @@ static void PEAR_SIGNAL_HANDLER usr1_handler( int signal, siginfo_t *siginfo, vo
 }
 
 
+/* Initialized before signal handlers are installed; never changed afterwards. */
+static volatile sig_atomic_t pear_signal_resume_observe = 1;
+
+static void pear_init_signal_resume_observation(void)
+{
+    const char *value = getenv("PEAR_SIGNAL_RESUME_OBSERVE");
+
+    if (!value) return;
+    if (!strcmp(value, "0")) pear_signal_resume_observe = 0;
+    else if (strcmp(value, "1"))
+    {
+        fprintf(stderr, "wine: invalid PEAR_SIGNAL_RESUME_OBSERVE (expected 0 or 1).\n");
+        exit(1);
+    }
+}
+
+
 /**********************************************************************
  *		usr2_handler
  *
@@ -1744,7 +1783,7 @@ static void PEAR_SIGNAL_HANDLER usr2_handler( int signal, siginfo_t *siginfo, vo
     if (!frame) return;
 
     /* write is async-signal-safe; do not add an allocating logger here. */
-    if (is_arm64ec())
+    if (is_arm64ec() && pear_signal_resume_observe)
     {
         static const char native[] = "Pear SIGUSR2 resume native\n";
         static const char guest[] = "Pear SIGUSR2 resume guest\n";
@@ -1986,6 +2025,8 @@ __ASM_GLOBAL_FUNC( pear_signal_ill,
 void signal_init_process( TEB *teb )
 {
     struct sigaction sig_act;
+
+    pear_init_signal_resume_observation();
 
 #ifdef __APPLE__
     pear_x18_getter = dlsym( RTLD_DEFAULT, "os_custom_x18_abi_enabled" );

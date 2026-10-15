@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "component": "pear-wine",
-  "layer": "accepted",
+  "layer": "selected",
   "upstream": {
     "url": "https://github.com/wine-mirror/wine.git",
     "commit": "4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf",
@@ -77,8 +77,8 @@
     {
       "path": "dlls/ntdll/unix/pear_fex_memory.c",
       "mode": "100644",
-      "size_bytes": 41376,
-      "sha256": "c53f9a2bafe5d9cced3bcc6e1cda8f195175e68f2d2adb04c902a2d77dd72e2b"
+      "size_bytes": 50375,
+      "sha256": "f0435fb10b5062eb9ff922dc8445836537d2942e0a5321f68d14529e36dcd1ed"
     },
     {
       "path": "dlls/ntdll/unix/pear_fex_memory_private.h",
@@ -97,6 +97,12 @@
       "mode": "100644",
       "size_bytes": 3978,
       "sha256": "dccb37fd2f3506ac95539f8c084860f426b338976862e734b6e307df87a228a3"
+    },
+    {
+      "path": "dlls/ntdll/unix/pear_query_context.h",
+      "mode": "100644",
+      "size_bytes": 262,
+      "sha256": "0dc3162fbe314b69776e8bb99a9244552fb754ce2b3c94650d2c4d85eac10976"
     },
     {
       "path": "dlls/ntdll/unix/pear_signal_fixture.c",
@@ -119,8 +125,8 @@
     {
       "path": "dlls/ntdll/unix/signal_arm64.c",
       "mode": "100644",
-      "size_bytes": 96157,
-      "sha256": "ed61e67b9b8789a2c0632ce0a5475c89a8a3bc4d853a405b346aa2c2f35716a9"
+      "size_bytes": 97575,
+      "sha256": "fbd5f053720a72bc1531138e728fc8d756e67446c986494c6ee83d3f20ca31de"
     },
     {
       "path": "dlls/ntdll/unix/stage4_protocol.h",
@@ -137,8 +143,8 @@
     {
       "path": "dlls/ntdll/unix/virtual.c",
       "mode": "100644",
-      "size_bytes": 306842,
-      "sha256": "624b909228b6e3329355b0d8cde2a60bd98c6fa84f7f2cc2d59a0118e05d15f4"
+      "size_bytes": 311351,
+      "sha256": "f73cad94b62aea7511eed8bf2f95e9dc5b1e5665497baa4251370d9399f6e793"
     },
     {
       "path": "dlls/ntdll/unixlib.h",
@@ -1930,12 +1936,174 @@
         }
       ],
       "license": "MIT"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0001-owner-timeout-observation.patch",
+      "sha256": "60ddf8b476581d60d36de295a936d15bc948bd536a2682ee0a107692304533bb",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 47,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "c53f9a2bafe5d9cced3bcc6e1cda8f195175e68f2d2adb04c902a2d77dd72e2b",
+          "after_sha256": "759f759e9c528abccd804f46dd7df3d3d587e20a8b17ce8355ffc4d8faa6aa7e",
+          "size_bytes": 44377,
+          "mode": "100644"
+        }
+      ],
+      "license": "Original Pear MIT owner implementation"
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0002-owner-thread-identity-observation.patch",
+      "sha256": "17c30418fb882e72601cc2b9dd49ed2b28421d634cf8ae06865f6ccf5c62faf1",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 48,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "759f759e9c528abccd804f46dd7df3d3d587e20a8b17ce8355ffc4d8faa6aa7e",
+          "after_sha256": "d5a8eb45ad527bd554b79ac1a050814beabc048c3ba6bc2b7bd8ffa5b6fd1b04",
+          "size_bytes": 46978,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0003-signal-resume-observation-gate.patch",
+      "sha256": "c5f62cf78632848236ddcba9cee8765e18c1b007bb7d88fede74947dc817274c",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 49,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "ed61e67b9b8789a2c0632ce0a5475c89a8a3bc4d853a405b346aa2c2f35716a9",
+          "after_sha256": "bf3a38abc66cb62a1c13491cd780f4a9176ef2210c0844e84c6ce5a735789f84",
+          "size_bytes": 96735,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0004b-query-progress-owner-scope.patch",
+      "sha256": "51c51a87b1eada54c905cdce96e2ced74d57802d952ca254ec5d592b810d61bf",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 50,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "624b909228b6e3329355b0d8cde2a60bd98c6fa84f7f2cc2d59a0118e05d15f4",
+          "after_sha256": "0b9b325bb66797ebb2d2c2ece6671be6e29f73af2fe86e23038d952d43da7c72",
+          "size_bytes": 311058,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0005-query-saved-context.patch",
+      "sha256": "ee71a38c067048535a3980e228b54f91551989e4061f238218d490e40f236903",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 51,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/virtual.c",
+          "before_sha256": "0b9b325bb66797ebb2d2c2ece6671be6e29f73af2fe86e23038d952d43da7c72",
+          "after_sha256": "f73cad94b62aea7511eed8bf2f95e9dc5b1e5665497baa4251370d9399f6e793",
+          "size_bytes": 311351,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/signal_arm64.c",
+          "before_sha256": "bf3a38abc66cb62a1c13491cd780f4a9176ef2210c0844e84c6ce5a735789f84",
+          "after_sha256": "fbd5f053720a72bc1531138e728fc8d756e67446c986494c6ee83d3f20ca31de",
+          "size_bytes": 97575,
+          "mode": "100644"
+        },
+        {
+          "path": "dlls/ntdll/unix/pear_query_context.h",
+          "before_sha256": null,
+          "after_sha256": "0dc3162fbe314b69776e8bb99a9244552fb754ce2b3c94650d2c4d85eac10976",
+          "size_bytes": 262,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "runtime/wine/patches/startup/0007-registration-observation.patch",
+      "sha256": "0ad335d4b2db55e8d5447e9ef7bec45bbbd9a6fde21c78282238f0fdee3b0d70",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "selected working checkpoint; exact content digest retained",
+      "order": 52,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "d5a8eb45ad527bd554b79ac1a050814beabc048c3ba6bc2b7bd8ffa5b6fd1b04",
+          "after_sha256": "36c2935779f02ec23df81254cc2bee059fe2b9a1563c874dcbbed280749171b2",
+          "size_bytes": 48664,
+          "mode": "100644"
+        }
+      ],
+      "license": null
+    },
+    {
+      "legacy_path": "generated/d27-native-owner.patch",
+      "sha256": "b74846e3b78c92869156ccc749adab7ffcc0e2e0b1c245d60494a1a740a8d417",
+      "source_repository": "https://github.com/postmelee/pear",
+      "checkpoint_commit": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+      "origin_kind": "generated exact checkpoint; not an upstream author commit",
+      "generator": "tools/steam/abort_source.py",
+      "order": 53,
+      "layer": "selected",
+      "previous_classification": "current_candidate",
+      "changes": [
+        {
+          "path": "dlls/ntdll/unix/pear_fex_memory.c",
+          "before_sha256": "36c2935779f02ec23df81254cc2bee059fe2b9a1563c874dcbbed280749171b2",
+          "after_sha256": "f0435fb10b5062eb9ff922dc8445836537d2942e0a5321f68d14529e36dcd1ed",
+          "size_bytes": 50375,
+          "mode": "100644"
+        }
+      ],
+      "license": null
     }
   ],
   "source_semantics": "Exact selected source checkpoint; merged source ownership view is distinct from per-artifact compilation views.",
   "source_authority": "Imported checkpoint; final authority cutover requires separate owner acceptance.",
   "private_inputs": "No game-derived selector, owned image/spec/role data, private diagnostics, prefix, credentials or signing data is imported.",
-  "generated_inputs": [],
+  "generated_inputs": [
+    {
+      "name": "PearAbortObservation.h",
+      "provider": "pear-runtime",
+      "sha256": "da52c81da2051d3c255dc953f1c49758d76920f065de076de2adfa53c6f324a5",
+      "tracked_here": false
+    }
+  ],
   "imported_headers": [
     {
       "path": "dlls/winemac.drv/pear_dxmt/winemetal.h",
