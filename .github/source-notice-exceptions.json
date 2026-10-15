@@ -1,0 +1,32 @@
+{
+  "pear/native_api_variant.py": {
+    "license": "MIT",
+    "notice": "pear/native-api-variant-provenance.json",
+    "reason": "Retain existing MIT terms; exact current bytes and original import/adaptation are recorded in pear/native-api-variant-provenance.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  },
+  "pear/tests/fixtures/cocoa_startup/cocoa_main.baseline.m": {
+    "license": "LGPL-2.1-or-later",
+    "notice": "pear/tests/NOTICE.md",
+    "reason": "Retain existing LGPL-2.1-or-later terms; exact current bytes and original import/adaptation are recorded in pear/fixture-source-manifest.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  },
+  "pear/tests/test_api_architecture.py": {
+    "license": "MIT",
+    "notice": "pear/native-api-variant-provenance.json",
+    "reason": "Retain existing MIT terms; exact current bytes and original import/adaptation are recorded in pear/native-api-variant-provenance.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  },
+  "pear/tests/test_api_variant.py": {
+    "license": "MIT",
+    "notice": "pear/native-api-variant-provenance.json",
+    "reason": "Retain existing MIT terms; exact current bytes and original import/adaptation are recorded in pear/native-api-variant-provenance.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  },
+  "pear/tests/test_fixture_errors.py": {
+    "license": "MIT",
+    "notice": "pear/tests/NOTICE.md",
+    "reason": "Retain existing MIT terms; exact current bytes and original import/adaptation are recorded in pear/test-port-provenance.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  },
+  "pear/tests/test_image_admission_correction.py": {
+    "license": "MIT",
+    "notice": "pear/tests/NOTICE.md",
+    "reason": "Retain existing MIT terms; exact current bytes and original import/adaptation are recorded in pear/test-port-provenance.json. This changes expected license metadata only and does not waive missing legacy leading headers or invent attribution."
+  }
+}

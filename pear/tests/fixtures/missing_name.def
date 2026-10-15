@@ -1,0 +1,4 @@
+; Original Pear negative import declaration, SPDX-License-Identifier: MIT.
+LIBRARY lifetime-arm64.dll
+EXPORTS
+    PearMissing

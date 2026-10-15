@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "origin_repository": "https://github.com/postmelee/pear",
+  "origin_checkpoint": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+  "files": [
+    {
+      "origin_path": "tests/wine/test_abi.py",
+      "path": "pear/tests/test_abi.py",
+      "origin_sha256": "fc7c3edee874e92655c57fc5da1fc7930b1fde2d7bd8092ef6f4c4507d783346",
+      "sha256": "7520140147f467e2dbbcc252c105a15caaaf6c24e33b60176b223d834473e43a",
+      "test_methods_unchanged": 8,
+      "adaptation": "Canonical fork source paths and original fixture include filename; source acquisition only, original test methods retained. Exact canonical source copied into owned temporary harness so quoted includes select original synthetic headers instead of adjacent production headers.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_fixture_errors.py",
+      "path": "pear/tests/test_fixture_errors.py",
+      "origin_sha256": "7ee9f9941620a9979369450846b38c4022c2920bed94d0486ad6094a66ec83a4",
+      "sha256": "887597f08caaaa6747616e7e927112c9ba584ab770e7a941ca9a69c206a4369b",
+      "test_methods_unchanged": 9,
+      "adaptation": "Canonical fork source paths and original fixture include filename; source acquisition only, original test methods retained.",
+      "license": "MIT"
+    },
+    {
+      "origin_path": "tests/wine/test_pe_imports.py",
+      "path": "pear/tests/test_pe_imports.py",
+      "origin_sha256": "779ed61bb9962b1918aabb55a977fbd1605a8d4eea66e4d8b094ec5a54818abd",
+      "sha256": "b73d1e950c582a50c64bb0999e3797bd364ff12e8dd866d4cd478d70dd840fe9",
+      "test_methods_unchanged": 8,
+      "adaptation": "Canonical fork source paths and original fixture include filename; source acquisition only, original test methods retained.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tools/wine/abi_review.py",
+      "path": "pear/abi_review.py",
+      "origin_sha256": "fa92d9707b3446f7bc806ec616a9a5637103922841b171b7659af307f6178d46",
+      "sha256": "5ff84f88fd8f4c7c613b45d34300ddd68b9328d48de144644a206efba59a0b11",
+      "unchanged_function_bodies": [
+        "parse",
+        "clean",
+        "branch_target",
+        "canonical",
+        "helper_review",
+        "analyze",
+        "macho",
+        "validate_actual",
+        "reproduce_reader"
+      ],
+      "excluded_legacy_functions": [
+        "inspect_build",
+        "main"
+      ],
+      "adaptation": "Pure analyzer/read reproduction functions unchanged; explicit binary/disassembly CLI replaces implicit historical build/tool roots.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_abi_review.py",
+      "path": "pear/tests/test_abi_review.py",
+      "origin_sha256": "7f6ead8829b0251154c5d04d4ce402bb31bdc2de371f5032b6a4684dc2447973",
+      "sha256": "1f6882897245aec27dcf0f8f19b8b2aa5137f71dcf83074da313fa32808dfd6c",
+      "adaptation": "Import canonical analyzer/runtime error provider only; original tests unchanged.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_native_architecture.py",
+      "path": "pear/tests/test_native_architecture.py",
+      "origin_sha256": "3f2a442f2c9b3796d275d72776ed35d3ec2da451ecf4e6100c875a837225b051",
+      "sha256": "a5cb787c69502d341d6dc2db40a351d2b01039f1002e93d720a83b6e4a09e545",
+      "test_methods_unchanged": 9,
+      "adaptation": "Canonical selected source and pinned Git upstream baseline replace patch replay; original test methods and compiler/oracles retained.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_cocoa_startup.py",
+      "path": "pear/tests/test_cocoa_startup.py",
+      "origin_sha256": "2c76cf49ba2f35a62e17d6bfc7795d559202cc90875a84ef87478f7fb90edbd9",
+      "sha256": "f904aa650bd2511aa4cadf3a574c863630a8439590f5cbb991f5f95a5c919c88",
+      "test_methods_unchanged": 3,
+      "adaptation": "Canonical selected source and pinned Git upstream baseline replace patch replay; original test methods and compiler/oracles retained.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_pe_arena.py",
+      "path": "pear/tests/test_pe_arena.py",
+      "origin_sha256": "56d60a7ff263f07957b1b156f58784ac2724759d77224ef0e8d79ba358d800ee",
+      "sha256": "b138201972ddd8320cdee11ea512ca5b79f53e1202021076d261ad6c833a021d",
+      "test_methods_unchanged": 21,
+      "adaptation": "Canonical selected C/header provider and explicit hashed generated headers. Pre-cookie source frozen only for historical negative controls; no historical current-source replay. The selected owner also requires its current pear_fex_memory_private.h, copied exactly into the harness.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_dynamic_owner.py",
+      "path": "pear/tests/test_dynamic_owner.py",
+      "origin_sha256": "bc874ee305c136a893b66600835dbdc3dc60a1abb846bc55e631d5f8145f1342",
+      "sha256": "b95bca3db953ae1ee391fa7cd7f8685c8630aec8378af725e18392b4603cad2a",
+      "test_methods_unchanged": 1,
+      "adaptation": "Canonical selected C/header provider and explicit hashed generated headers. Pre-cookie source frozen only for historical negative controls; no historical current-source replay. The selected owner also requires its current pear_fex_memory_private.h, copied exactly into the harness.",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "origin_path": "tests/wine/test_image_admission_correction.py",
+      "path": "pear/tests/test_image_admission_correction.py",
+      "origin_sha256": "ae3d193d0746563777c3746ab4b5ebda19986e75a94a9a92799a04ce3f22409a",
+      "sha256": "3799a796f38aadc9bbe0978b9f5c6a47a8b86cdcc4e895bacd33fd1164c1f857",
+      "test_methods_unchanged": 1,
+      "adaptation": "Canonical selected C/header provider and explicit hashed generated headers. Pre-cookie source frozen only for historical negative controls; no historical current-source replay. The selected owner also requires its current pear_fex_memory_private.h, copied exactly into the harness.",
+      "license": "MIT"
+    }
+  ],
+  "scope": "Portable native C and synthetic failure controls; not Wine/PE execution",
+  "source_binding_helper": {
+    "path": "pear/tests/source_inputs.py",
+    "sha256": "85f063913dacbbf23bf3ed94a61ee8234654a3cfa1030434c535479054e0029c",
+    "origin_path": "tests/wine/stage4_source.py",
+    "origin_sha256": "a6747239fd6c202d1125cf2ad450f32b6621c359cbc293ed50b496fef2998c59",
+    "adaptation": "Original ordinary_file guard; canonical manifest, pinned upstream, explicit generated header and immutable negative input bindings replace old implicit roots and editable patch composition."
+  }
+}

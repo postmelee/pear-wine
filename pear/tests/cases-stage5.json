@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "record_kind": "wine_fixture_cases",
+  "suite": "mac-driver",
+  "qualification": "instrumented-arm64-mac-driver-only",
+  "environment_policy": {
+    "id": "native-api-abi-no-mono-v1",
+    "scope": "owned-api-abi-loader-and-descendants",
+    "prefix_initialization": "fresh-wineboot",
+    "WINEDLLOVERRIDES": "mscoree=",
+    "mono_support": "not-exercised",
+    "clr_support": "disabled-for-native-fixtures"
+  },
+  "cases": [
+    {
+      "id": "api",
+      "entrypoint": "api_pe",
+      "args": [
+        "space argument",
+        "Ω한글🚀"
+      ],
+      "timeout_ms": 180000,
+      "expected_exit": 0
+    },
+    {
+      "id": "abi",
+      "entrypoint": "abi_pe",
+      "args": [],
+      "timeout_ms": 180000,
+      "expected_exit": 0
+    },
+    {
+      "id": "threads",
+      "entrypoint": "stage4_pe",
+      "args": [],
+      "timeout_ms": 180000,
+      "expected_exit": 0
+    },
+    {
+      "id": "window",
+      "entrypoint": "window_pe",
+      "args": [],
+      "timeout_ms": 180000,
+      "expected_exit": 0
+    }
+  ],
+  "controls": [
+    "x64_control",
+    "i386_control"
+  ],
+  "bounds": {
+    "stdout_bytes": 262144,
+    "stderr_bytes": 262144,
+    "event_bytes_per_process": 2097152,
+    "total_event_bytes": 33554432,
+    "max_processes": 64,
+    "registration_ms": 30000,
+    "grace_ms": 3000,
+    "terminate_ms": 2000,
+    "kill_ms": 5000,
+    "drain_ms": 1000,
+    "window_loader_event_bytes": 12582912,
+    "window_case_json_bytes": 33554432,
+    "window_case_json_nodes": 2000000
+  },
+  "provenance": "Original Pear fixtures with actual Wine prefix initialization and registered Wine-created children. Wine's documented mscoree= override disables CLR loading and registration in these disposable native fixtures; Mono support is not exercised. Native external exec is refused. Instrumented descendants retain the owned root process group; ordinary-user process behavior is not qualified. Stage 4 adds original bounded thread, memory, exception, signal and controlled fault-termination fixtures; it does not qualify general unwinding or game execution. Stage 5 adds twenty original owned Win32 window lifetimes through the real Cocoa driver and main run loop; it does not qualify rendering, Metal, DXMT, general callbacks or games."
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "record_kind": "wine_fixture_cases",
+  "suite": "bootstrap",
+  "qualification": "native-bootstrap-only",
+  "cases": [
+    {"id": "bootstrap", "mode": "normal", "timeout_ms": 120000, "expected": "bootstrap_stop"},
+    {"id": "bootstrap-timeout", "mode": "hold", "timeout_ms": 1500, "expected": "timeout"},
+    {"id": "wrong-prefix-server", "mode": "wrong-prefix", "timeout_ms": 30000, "expected": "server_refused"}
+  ],
+  "bounds": {"stdout_bytes": 262144, "stderr_bytes": 262144, "event_bytes": 2097152,
+             "grace_ms": 3000, "terminate_ms": 2000, "kill_ms": 5000, "drain_ms": 1000},
+  "provenance": "Original Pear fixtures and native lifecycle controls. No proprietary inputs. Non-runtime unit controls never authorize restricted execution."
+}

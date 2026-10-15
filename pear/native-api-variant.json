@@ -1,0 +1,52 @@
+{
+  "contract_sources": {
+    "dlls/ntdll/unix/system.c": {
+      "sha256": "39a0c7e68fb6a787ab8e82050eec54ff20424517fd94f79b107c04be5f021a56",
+      "size_bytes": 171381
+    },
+    "include/winnt.h": {
+      "sha256": "030dfb2b3fbdebad4c386d96cb31d081ac635914ab2ff674cbf12b5cecbf8834",
+      "size_bytes": 313257
+    },
+    "server/registry.c": {
+      "sha256": "c93b57df78d5394952baf227efb0beb3f6be375fdbb1cf94837758b9b45d98b1",
+      "size_bytes": 75803
+    }
+  },
+  "expected_architecture": {
+    "flags": [
+      7,
+      18
+    ],
+    "machines": [
+      43620,
+      332
+    ],
+    "record_kind": "pear_architecture_result",
+    "returned_bytes": 12,
+    "status": 0,
+    "terminator": 0,
+    "version": 1
+  },
+  "generated_sha256": "e978253389db2360448d0e93945e6bc65398ba8f0b5a136a1d5d3123bd8a4e8c",
+  "generator": {
+    "path": "pear/native_api_variant.py",
+    "sha256": "69c90e20a900e1300656e56ac20f75293ec45fbee4868476d762a47fcd1a0bd3",
+    "size_bytes": 10262
+  },
+  "license": "MIT; generated fixture preserves its original header.",
+  "original": {
+    "path": "pear/tests/fixtures/api_pe.c",
+    "sha256": "00ce66bba9690a0c23f945ca447465639794ccca2e2e418777b2809ecd41e1d8",
+    "size_bytes": 12610
+  },
+  "original_policy": "Preserved native-only fixture and original expected_api_rows require ARM64 flags7 and eight bytes.",
+  "rationale": "ARM64EC configuration advertises ARM64/I386/AMD64; class181 filters AMD64. Exact ARM64 flags7 and I386 flags18 plus terminator are required. This does not establish I386 execution or cold Wineboot support.",
+  "schema_version": 1,
+  "scope": "selected_wine_api_fixture_variant",
+  "server_build_artifact": {
+    "sha256": "5ab9f6901e84c47d0137c18d7a4adc41a8443acc118642bf4660f0b584e1e851",
+    "size_bytes": 861544
+  },
+  "variant": "arm64ec-class181-arm64-i386-v1"
+}

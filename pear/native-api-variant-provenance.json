@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "scope": "exact_selected_native_api_fixture_adaptation",
+  "canonical_owner": "pear-wine",
+  "origin_repository": "https://github.com/postmelee/pear",
+  "origin_checkpoint": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+  "import": {
+    "origin_path": "tests/wine/test_api_architecture.py",
+    "destination": "pear/tests/test_api_architecture.py",
+    "sha256": "db33385bc0ba31fa477875943f9fc377d4683f9590c51d418f4a1b1889d0254f",
+    "size_bytes": 7874,
+    "license": "MIT",
+    "transformation": "Exact original bytes; retains all six native-only C query harness tests."
+  },
+  "changes": [
+    "A hash-admitted generator changes one exact two-line native-only condition to a three-line ARM64/I386 condition. Generated C remains a retained build output, not a second editable source.",
+    "The selected ARM64EC build exposes ARM64 and I386 after filtering AMD64 in NtQuerySystemInformationEx class181. The variant requires exact order, flags, twelve bytes and zero terminator; no accepted alternatives.",
+    "The original native-only fixture and oracle remain intact. No runtime, i386 execution, cold-prefix or game support claim.",
+    "Use the original compiler command/toolchain and complete header/library inputs, with explicit depfile and verbose compiler diagnostic additions. A final released common build operation binds the generated PE."
+  ],
+  "files": [
+    {
+      "path": "pear/native_api_variant.py",
+      "sha256": "69c90e20a900e1300656e56ac20f75293ec45fbee4868476d762a47fcd1a0bd3",
+      "size_bytes": 10262,
+      "license": "MIT"
+    },
+    {
+      "path": "pear/tests/test_api_variant.py",
+      "sha256": "d40a4cd3ddea2064f4630d0e37bdc751203c4f38b1a5df4ace1746983493627c",
+      "size_bytes": 5580,
+      "license": "MIT"
+    },
+    {
+      "path": "pear/tests/test_api_architecture.py",
+      "sha256": "db33385bc0ba31fa477875943f9fc377d4683f9590c51d418f4a1b1889d0254f",
+      "size_bytes": 7874,
+      "license": "MIT"
+    }
+  ],
+  "runtime_consumer": "pear-runtime/pear_runtime/fixtures/native/api_variant.py",
+  "policy_path": "pear/native-api-variant.json"
+}

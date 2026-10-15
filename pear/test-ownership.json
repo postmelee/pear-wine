@@ -21,8 +21,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_abi.py",
       "role": "ABI transition and native bridge refusal",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "7520140147f467e2dbbcc252c105a15caaaf6c24e33b60176b223d834473e43a",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -33,8 +35,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_abi_review.py",
       "role": "ABI transition and native bridge refusal",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "1f6882897245aec27dcf0f8f19b8b2aa5137f71dcf83074da313fa32808dfd6c",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -45,8 +49,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_pe_imports.py",
       "role": "PE loader, publication and import rollback",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "b73d1e950c582a50c64bb0999e3797bd364ff12e8dd866d4cd478d70dd840fe9",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -57,8 +63,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_pe_arena.py",
       "role": "PE loader, publication and import rollback",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "b138201972ddd8320cdee11ea512ca5b79f53e1202021076d261ad6c833a021d",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -69,8 +77,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_image_admission_correction.py",
       "role": "PE loader, publication and import rollback",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "3799a796f38aadc9bbe0978b9f5c6a47a8b86cdcc4e895bacd33fd1164c1f857",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -81,8 +91,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_dynamic_owner.py",
       "role": "Wine native memory owner range/generation/rollback",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "b95bca3db953ae1ee391fa7cd7f8685c8630aec8378af725e18392b4603cad2a",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -93,8 +105,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_cocoa_startup.py",
       "role": "Mac-driver provider lifetime and fixture refusal",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "f904aa650bd2511aa4cadf3a574c863630a8439590f5cbb991f5f95a5c919c88",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -105,8 +119,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_fixture_errors.py",
       "role": "Mac-driver provider lifetime and fixture refusal",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "887597f08caaaa6747616e7e927112c9ba584ab770e7a941ca9a69c206a4369b",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -117,8 +133,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/test_native_architecture.py",
       "role": "Wine native architecture admission",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "a5cb787c69502d341d6dc2db40a351d2b01039f1002e93d720a83b6e4a09e545",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -129,8 +147,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/abi_review.py",
       "role": "Wine-specific finite assembly analyzer",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "5ff84f88fd8f4c7c613b45d34300ddd68b9328d48de144644a206efba59a0b11",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -141,8 +161,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/source_inputs.py",
       "role": "Adapt source lookup to canonical fork source; do not replay a second editable patch tree",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "adapted_and_portable_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "85f063913dacbbf23bf3ed94a61ee8234654a3cfa1030434c535479054e0029c",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -153,8 +175,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/fixtures/abi_pe.c",
       "role": "Owned ABI fixture",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "d8bfc5dc4a813b3fa219d312bc1b4b7fcd9f801d5dbb36001b24f8874a038769",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -165,8 +189,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/fixtures/abi_gateway.S",
       "role": "Owned ABI fixture",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "3b496ab4ff3303e91809bd69ed6fdedb8dfd308abd83abdc50f76a64ecf84ef5",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -177,8 +203,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "dlls/ntdll/unix/pear_abi_fixture.c",
       "role": "Use canonical imported Wine native fixture source; no independently edited test copy",
-      "status": "already_canonical_exact_source",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "80836d204a101c52f2921212f015ffe5089b8e06a8303b31d8b27b268ebd027c",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -189,8 +217,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/fixtures/cocoa_startup/COPYING.LIB",
       "role": "Original Cocoa harness and licensed upstream baseline; prefer canonical provider source when adapting",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "f2f118b9029ec1871b953639ecc46651b2fc7b62e295e6cf3ef2ac4c9a058b33",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -201,8 +231,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/fixtures/cocoa_startup/cocoa_main.baseline.m",
       "role": "Original Cocoa harness and licensed upstream baseline; prefer canonical provider source when adapting",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "041d1dc87bde43a3fcf73124cb6b7e0b4bd4461937d5b1a7fa564fc1f4aeb1da",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -213,8 +245,10 @@
       "canonical_package": "pear-wine",
       "canonical_destination": "pear/tests/fixtures/cocoa_startup/startup_harness.m",
       "role": "Original Cocoa harness and licensed upstream baseline; prefer canonical provider source when adapting",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "exact_export_or_single_provider_verified_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_sha256": "5a34d8472c99e59594d89dcc0b236f90112fe249c20ccd8ee3a042ce73559588",
+      "source_authority_cutover": "pending_final_owner_acceptance"
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -225,8 +259,18 @@
       "canonical_package": "pear-runtime",
       "canonical_destination": "tests/wine_integration/test_memory_wine_bitmap.py",
       "role": "Cross-component evidence, configured runtime or prefix/build admission; do not duplicate in Wine",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "pure_tests_adopted_and_current_contract_mapping_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_destinations": [
+        "tests/wine_integration/test_memory_wine_bitmap.py"
+      ],
+      "source_authority_cutover": "pending_final_owner_acceptance",
+      "case_mapping": "provenance/wine-integration-tests-import.json#/test_ownership/case_map",
+      "case_dispositions": {
+        "exact_test_import": 29
+      },
+      "legacy_orchestration_reintroduced": false,
+      "native_execution_claimed": false
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -237,8 +281,18 @@
       "canonical_package": "pear-runtime",
       "canonical_destination": "tests/wine_integration/test_memory_wine_bitmap_prefix.py",
       "role": "Cross-component evidence, configured runtime or prefix/build admission; do not duplicate in Wine",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "pure_tests_adopted_and_current_contract_mapping_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_destinations": [
+        "tests/wine_integration/test_memory_wine_bitmap_prefix.py"
+      ],
+      "source_authority_cutover": "pending_final_owner_acceptance",
+      "case_mapping": "provenance/wine-integration-tests-import.json#/test_ownership/case_map",
+      "case_dispositions": {
+        "exact_test_import": 8
+      },
+      "legacy_orchestration_reintroduced": false,
+      "native_execution_claimed": false
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -249,8 +303,28 @@
       "canonical_package": "pear-runtime",
       "canonical_destination": "tests/wine_integration/test_stage3_memory_wine_build.py",
       "role": "Cross-component evidence, configured runtime or prefix/build admission; do not duplicate in Wine",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "pure_tests_adopted_and_current_contract_mapping_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_destinations": [
+        "tests/assembly/test_assembly.py",
+        "tests/assembly/test_driver.py",
+        "tests/build/test_build.py",
+        "tests/build/test_wine_recipe.py",
+        "tests/fixtures/controls/test_execution.py",
+        "tests/fixtures/test_context.py",
+        "tests/fixtures/test_driver.py",
+        "tests/fixtures/test_supervision.py",
+        "tests/wine_integration/test_stage3_memory_wine_build.py"
+      ],
+      "source_authority_cutover": "pending_final_owner_acceptance",
+      "case_mapping": "provenance/wine-integration-tests-import.json#/test_ownership/case_map",
+      "case_dispositions": {
+        "retired_implementation_specific": 15,
+        "current_contract_counterpart": 3,
+        "exact_test_import": 3
+      },
+      "legacy_orchestration_reintroduced": false,
+      "native_execution_claimed": false
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -261,8 +335,25 @@
       "canonical_package": "pear-runtime",
       "canonical_destination": "tests/wine_integration/test_stage3_memory_wine_run.py",
       "role": "Cross-component evidence, configured runtime or prefix/build admission; do not duplicate in Wine",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "pure_tests_adopted_and_current_contract_mapping_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_destinations": [
+        "tests/assembly/test_assembly.py",
+        "tests/fixtures/controls/test_execution.py",
+        "tests/fixtures/test_admission.py",
+        "tests/fixtures/test_driver.py",
+        "tests/fixtures/test_supervision.py",
+        "tests/wine_integration/test_stage3_memory_wine_run.py"
+      ],
+      "source_authority_cutover": "pending_final_owner_acceptance",
+      "case_mapping": "provenance/wine-integration-tests-import.json#/test_ownership/case_map",
+      "case_dispositions": {
+        "exact_test_import": 33,
+        "retired_implementation_specific": 3,
+        "current_contract_counterpart": 5
+      },
+      "legacy_orchestration_reintroduced": false,
+      "native_execution_claimed": false
     },
     {
       "legacy_repository": "https://github.com/postmelee/pear",
@@ -271,10 +362,28 @@
       "sha256": "2d28dca249180d2507de7badb02c3636fdc7aa285581273458524f46c70e606f",
       "size_bytes": 44840,
       "canonical_package": "pear-runtime",
-      "canonical_destination": "tests/wine_integration/test_memory_wine_runtime.py",
+      "canonical_destination": "provenance/wine-integration-tests-import.json",
       "role": "Cross-component evidence, configured runtime or prefix/build admission; do not duplicate in Wine",
-      "status": "pending_stage4_adaptation_and_execution",
-      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping."
+      "status": "pure_tests_adopted_and_current_contract_mapping_validated_stage4",
+      "license_handling": "Retain actual file notices and original terms; no test code copied or relicensed by this mapping.",
+      "canonical_destinations": [
+        "tests/assembly/test_assembly.py",
+        "tests/assembly/test_driver.py",
+        "tests/assembly/test_original_checks.py",
+        "tests/fixtures/controls/test_execution.py",
+        "tests/fixtures/test_admission.py",
+        "tests/fixtures/test_context.py",
+        "tests/fixtures/test_driver.py",
+        "tests/fixtures/test_supervision.py"
+      ],
+      "source_authority_cutover": "pending_final_owner_acceptance",
+      "case_mapping": "provenance/wine-integration-tests-import.json#/test_ownership/case_map",
+      "case_dispositions": {
+        "retired_implementation_specific": 19,
+        "current_contract_counterpart": 9
+      },
+      "legacy_orchestration_reintroduced": false,
+      "native_execution_claimed": false
     }
   ]
 }

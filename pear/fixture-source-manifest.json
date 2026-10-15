@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "origin_repository": "https://github.com/postmelee/pear",
+  "origin_checkpoint": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+  "scope": "Selected native Wine test fixture source and licensed Cocoa harness dependencies",
+  "canonical_owner": "pear-wine",
+  "files": [
+    {
+      "origin_path": "tests/wine/fixtures/api_pe.c",
+      "path": "pear/tests/fixtures/api_pe.c",
+      "sha256": "00ce66bba9690a0c23f945ca447465639794ccca2e2e418777b2809ecd41e1d8",
+      "size_bytes": 12610,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/lifetime_pe.c",
+      "path": "pear/tests/fixtures/lifetime_pe.c",
+      "sha256": "bffeacea94d65f70c56cefea190f15a0d0683bae0f0c2f3ee324ec871ee2d29a",
+      "size_bytes": 4556,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/missing_import_pe.c",
+      "path": "pear/tests/fixtures/missing_import_pe.c",
+      "sha256": "5d8b432f0673d9b6cffb679c6b75eb1cf53d15a22dbd0fe5887232a1d94576d9",
+      "size_bytes": 486,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/abi_pe.c",
+      "path": "pear/tests/fixtures/abi_pe.c",
+      "sha256": "d8bfc5dc4a813b3fa219d312bc1b4b7fcd9f801d5dbb36001b24f8874a038769",
+      "size_bytes": 27153,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/abi_gateway.S",
+      "path": "pear/tests/fixtures/abi_gateway.S",
+      "sha256": "3b496ab4ff3303e91809bd69ed6fdedb8dfd308abd83abdc50f76a64ecf84ef5",
+      "size_bytes": 3507,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/threads_pe.c",
+      "path": "pear/tests/fixtures/threads_pe.c",
+      "sha256": "00e0c23d7d1babd54334d33fbcd3a12577200d0c16e244b80c6de77dbaad991d",
+      "size_bytes": 17897,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/threads_gateway.S",
+      "path": "pear/tests/fixtures/threads_gateway.S",
+      "sha256": "fae78696858f5ee4ff9bf35260c948bc363eab06cff864e6cefe83dcf4867ed3",
+      "size_bytes": 2204,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/exceptions_pe.c",
+      "path": "pear/tests/fixtures/exceptions_pe.c",
+      "sha256": "417525919e9943fbfc278db6f8387799bf2b29eaf4c1b941e8eaa3e67ad09842",
+      "size_bytes": 8591,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/memory_pe.c",
+      "path": "pear/tests/fixtures/memory_pe.c",
+      "sha256": "dd764c9efde5221c0d3ef48531e9fee7e73a83a6ee86bf0787bbedf5ebb2b29d",
+      "size_bytes": 13234,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/window_pe.c",
+      "path": "pear/tests/fixtures/window_pe.c",
+      "sha256": "a7210e570afca6c293f5c7f7d16c4dba2d36252da172c3423eadbf71f7deb3d5",
+      "size_bytes": 14605,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/window_control_pe.c",
+      "path": "pear/tests/fixtures/window_control_pe.c",
+      "sha256": "2cb1c0da0f9eac5f1d8c63a24ed74a2e6ed0f37d6f8fdf0c5d718afece057a44",
+      "size_bytes": 316,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/bootstrap_native.c",
+      "path": "pear/tests/fixtures/bootstrap_native.c",
+      "sha256": "83069424ceb5f44feefb78df4872157910202760c18b8b72c5b3c74e0a487fff",
+      "size_bytes": 3362,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/sentinel.c",
+      "path": "pear/tests/fixtures/sentinel.c",
+      "sha256": "8b2d609fc44e6b86ba9e139988747fefbd477bf6664032bc18f0f372b1b3f6a6",
+      "size_bytes": 2686,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/cases-stage5.json",
+      "path": "pear/tests/cases-stage5.json",
+      "sha256": "46961be7947a011ceab37c981736f487af4cae6986118c2af0b40bfbe6e999c2",
+      "size_bytes": 2282,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/cases.json",
+      "path": "pear/tests/cases.json",
+      "sha256": "e61a880c5d4b9b250e5f6048a08fbcc8a306c7c62198d43afdd6601a11b6f812",
+      "size_bytes": 781,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/COPYING.LIB",
+      "path": "pear/tests/fixtures/cocoa_startup/COPYING.LIB",
+      "sha256": "f2f118b9029ec1871b953639ecc46651b2fc7b62e295e6cf3ef2ac4c9a058b33",
+      "size_bytes": 26432,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/cocoa_main.baseline.m",
+      "path": "pear/tests/fixtures/cocoa_startup/cocoa_main.baseline.m",
+      "sha256": "041d1dc87bde43a3fcf73124cb6b7e0b4bd4461937d5b1a7fa564fc1f4aeb1da",
+      "size_bytes": 5153,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/mocks/AppKit/AppKit.h",
+      "path": "pear/tests/fixtures/cocoa_startup/mocks/AppKit/AppKit.h",
+      "sha256": "f0a49467eb2e7f9a84fbdbed2d581158ad02fc98e0081b8127bcb1933648b9a8",
+      "size_bytes": 72,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/mocks/cocoa_app.h",
+      "path": "pear/tests/fixtures/cocoa_startup/mocks/cocoa_app.h",
+      "sha256": "dfacc6ce4e4691e0909732f2761f9d60f075f66a01db56d433635da46335b2a3",
+      "size_bytes": 61,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/mocks/config.h",
+      "path": "pear/tests/fixtures/cocoa_startup/mocks/config.h",
+      "sha256": "6d1e1d0af4ec26fc79f39703e8df4a7790d55030c32c40c031c9742439aa922c",
+      "size_bytes": 82,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/mocks/macdrv.h",
+      "path": "pear/tests/fixtures/cocoa_startup/mocks/macdrv.h",
+      "sha256": "e17330a1e9c98b0bc24bb98a070f934938e997035cc293ea2ce105b3e3456d8e",
+      "size_bytes": 91,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/cocoa_startup/startup_harness.m",
+      "path": "pear/tests/fixtures/cocoa_startup/startup_harness.m",
+      "sha256": "5a34d8472c99e59594d89dcc0b236f90112fe249c20ccd8ee3a042ce73559588",
+      "size_bytes": 15295,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/api_launch.c",
+      "path": "pear/tests/fixtures/api_launch.c",
+      "sha256": "17eb0c0b848440f4b27345aa915c6131a3cccbf112ac862aabd506d229242487",
+      "size_bytes": 3326,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/lifetime_pe.h",
+      "path": "pear/tests/fixtures/lifetime_pe.h",
+      "sha256": "3e7cdd47cf9b3ec0b007ea5adf7be7d94a6346faa2897021aa642368b541c2e6",
+      "size_bytes": 917,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/missing_name.def",
+      "path": "pear/tests/fixtures/missing_name.def",
+      "sha256": "88a33f1edb4bfc417abfd2732552a92efe343d3b8ec9b36ea1c83bba2ba0d2c6",
+      "size_bytes": 126,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/missing_ordinal.def",
+      "path": "pear/tests/fixtures/missing_ordinal.def",
+      "sha256": "c148f7f064c0be5a46777cd8d5ea7f03289e21f8fe4d0333267e16b43df818c7",
+      "size_bytes": 140,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/stage4_protocol.h",
+      "path": "pear/tests/fixtures/stage4_protocol.h",
+      "sha256": "fed6aec99834a1960e3a4ef4e116879fb64a0d7b019d84300c7cd82022635555",
+      "size_bytes": 2431,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/stage5_protocol.h",
+      "path": "pear/tests/fixtures/stage5_protocol.h",
+      "sha256": "bb2990f08bdf693b9223a7d1271723c2915fa87dface3fe39e8771c6f93201e5",
+      "size_bytes": 3728,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    },
+    {
+      "origin_path": "tests/wine/fixtures/stage5_census.h",
+      "path": "pear/tests/fixtures/stage5_census.h",
+      "sha256": "2abc01e678e964c7d45c097f73ad6c2714ac65ae5c1e18453bf97d35786dd226",
+      "size_bytes": 6853,
+      "mode": "100644",
+      "status": "exact_source_export_native_execution_separate"
+    }
+  ],
+  "license": "Existing per-file MIT/LGPL notices retained; original Pear GPL adoption applies where no separate terms. Adjacent notice deliberately preserves exact source hashes.",
+  "native_execution_performed": false,
+  "source_authority_cutover": "pending_final_owner_acceptance"
+}

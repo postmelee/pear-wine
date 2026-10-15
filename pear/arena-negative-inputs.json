@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "origin_checkpoint": "951264bf5be4b9d2afb87320f5fac74778b2dd58",
+  "files": [
+    {
+      "path": "pear/tests/fixtures/pe_arena_pre_cookie/pear_pe_arena.c",
+      "sha256": "50001d02e65344d6c8f852b399e0cba9b51ffa606e6193c5b6d5e68c4154707c",
+      "size_bytes": 34873,
+      "role": "immutable_historical_negative_control_not_current_implementation",
+      "origin_patch": "runtime/wine/patches/0003e-darwin-pe-publication.patch",
+      "origin_patch_sha256": "08fb5e8fd003eaf3156e730c5ba2864836aa62ca3cd2fee969ba3bc9623667db"
+    },
+    {
+      "path": "pear/tests/fixtures/pe_arena_pre_cookie/pear_pe_arena.h",
+      "sha256": "79c77cf2335144ab5515242cd408ad95416a4b755b6489738019f410414dbd13",
+      "size_bytes": 1863,
+      "role": "immutable_historical_negative_control_not_current_implementation",
+      "origin_patch": "runtime/wine/patches/0003e-darwin-pe-publication.patch",
+      "origin_patch_sha256": "08fb5e8fd003eaf3156e730c5ba2864836aa62ca3cd2fee969ba3bc9623667db"
+    }
+  ]
+}
