@@ -14,6 +14,17 @@ import stat
 import subprocess
 
 
+# Reviewed Task56 metadata only; other task/report/code paths remain refused.
+TASK_METADATA_PATHS = frozenset({
+    '.github/source-notice-exceptions.json',
+    'mydocs/working/task_m1_56_stage4.md',
+    'mydocs/working/task_m1_56_stage4.json',
+    'mydocs/working/task_m1_56_stage5.2.md',
+    'mydocs/working/task_m1_56_stage5.2.json',
+    'mydocs/working/task_m1_56_stage6.md',
+    'mydocs/working/task_m1_56_stage6.json',
+})
+
 class SourceError(Exception):
     """A stable source-admission failure code."""
 
@@ -79,7 +90,7 @@ def verify(root, peers=None):
     forbidden = ('PearAbortObservation.h', 'PearPhaseSelection.h')
     need(not any(Path(p.decode()).name in forbidden for p in tracked if p), 'private_or_generated_header')
     changed = git(root, 'diff', '--name-only', '-z', manifest['upstream']['commit'], '--').split(b'\0')
-    allowed = set(names) | {'README.md'}
+    allowed = set(names) | {'README.md'} | TASK_METADATA_PATHS
     need(all(p.decode() in allowed or p.startswith(b'pear/') for p in changed if p),
          'unaccounted_source_change')
     for module in manifest.get('submodules', []):
