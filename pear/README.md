@@ -49,7 +49,7 @@ test/tool revisions and provides the fixture and bounded recovery commands.
 
 The exercised development selector uses the separate runtime tool commit
 `6f0202b457f0e585c5c7621a63d203e77d07386d` and the exact
-[Pear development lock](https://github.com/postmelee/pear/blob/codex/task56/tools/development/locks/task56-development-v1.json).
+[Pear development lock](https://github.com/postmelee/pear/blob/2bfcc9dff80212ba40b841a2fe6c32033ca0e801/tools/development/locks/task56-development-v1.json).
 This later tool revision does not replace the compilation pins above.
 The retained candidate also binds canonical builder-source paths: a checkout
 with equal bytes at another path is not automatically an admitted replacement.
@@ -100,10 +100,12 @@ bootstrap and frame operations. Read-only game inspection admitted the exact
 private inputs and captured sources; game copying and execution were unperformed.
 Recovery switched the isolated selection from game to retained fixture and back;
 it was not a full runtime/toolchain/private-state restoration. See the
-[development entry and limits](https://github.com/postmelee/pear/blob/codex/task56/docs/development/rosetta-free.md#split-native-development-components).
+[development entry and limits](https://github.com/postmelee/pear/blob/2bfcc9dff80212ba40b841a2fe6c32033ca0e801/docs/development/rosetta-free.md#split-native-development-components).
 
 Preserve the previous environment and exact recovery inputs. The accepted source
 cutover is limited to the recorded implementation, tests and development handoff;
 D37 and separate observation research retain their previous owners and status.
 This does not establish gameplay, complete Rosetta-independence coverage or
 public distribution, or authorize activation or artifact deletion.
+
+The linked Pear documents are pinned to the accepted Stage 5.2 checkpoint. Their public reachability awaits authorized publication of Pear ancestry; the local reviewed checkout contains those exact files.
