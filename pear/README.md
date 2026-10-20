@@ -2,6 +2,12 @@
 
 This repository owns Wine host/PE source, native memory owner, loader/CHPE integration and Wine-side graphics provider. The exact imported source range is recorded in [source-manifest.json](source-manifest.json), including the unchanged upstream pin/tree, ordered original patch identities, source modes, and original Pear commit correspondence. Accepted baseline and selected checkpoint are separate commits. Original upstream history and notices are preserved.
 
+Use `master` for current Pear downstream development and as the pull-request base.
+Retain existing local `codex/task56` debug branches and detached checkouts at their
+recorded paths and commits. Historical source/build/tool pins below remain the
+inputs for their recorded recipes; changing the integration branch does not admit
+new runtime bytes.
+
 The pinned upstream commit is `4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf`. The selected range contains 58 changed source units. A merged source view is not a claim that every retained compiled object used that same view. Build recipes must preserve their per-artifact source/configuration correspondence. Wine 11/CodeWeavers Preview is a separate lineage.
 
 The selected reconstruction uses fork commit `1b76db6902345388c589ba3909b22badf751dfd5` with runtime builder
@@ -44,7 +50,7 @@ python3 -B -m pear_runtime.recipes.wine \
 
 This command runs from `pear-runtime`, after all named variables have been bound
 to reviewed canonical paths and the storage/input gates pass. The
-[development guide](https://github.com/postmelee/pear-runtime/blob/codex/task56/docs/development.md) distinguishes the historical build pins from later
+[development guide](https://github.com/postmelee/pear-runtime/blob/master/docs/development.md) distinguishes the historical build pins from later
 test/tool revisions and provides the fixture and bounded recovery commands.
 
 The exercised development selector uses the separate runtime tool commit
@@ -68,7 +74,7 @@ prefixes, owned image/spec inputs and signing material are not stored here.
 
 `pear-runtime/include/PearAbortObservation.h` is a generated build input owned by the common runtime. This fork intentionally does not track another copy. Wine exports `include/wine/pear_fex_memory.h` and the v1/v2 typed graphics provider headers. DXMT owns its upstream `winemetal.h` and `winemetal_thunks.h`; the Wine copies are pinned consumer mirrors.
 
-Canonical provider paths and exact digests are in the manifest. The existing owners accepted this fork as the single future editable authority for its selected range; frozen historical patches remain provenance. The [canonical cutover record](https://github.com/postmelee/pear-runtime/blob/codex/task56/provenance/source-cutover-task56.json) binds the exact reviewed commits and ownership scope. This local acceptance does not activate a runtime, renew historical build pins or release retained inputs. Historical private publication refs are recorded separately in the Pear Task #56 handoff.
+Canonical provider paths and exact digests are in the manifest. The existing owners accepted this fork as the single future editable authority for its selected range; frozen historical patches remain provenance. The [canonical cutover record](https://github.com/postmelee/pear-runtime/blob/master/provenance/source-cutover-task56.json) binds the exact reviewed commits and ownership scope. This local acceptance does not activate a runtime, renew historical build pins or release retained inputs. Historical private publication refs are recorded separately in the Pear Task #56 handoff.
 
 ## Licensing and contributions
 
@@ -90,7 +96,7 @@ remain separate claims. The selected reconstruction and candidate3's four native
 controls, three bootstrap controls, seven-fixture batch and eighteen-frame
 observation passed within their recorded scopes and independent-release checks.
 Retained candidate2 evidence is reused only under the reviewed unchanged-input
-boundary. The [accepted method map](https://github.com/postmelee/pear-runtime/blob/codex/task56/provenance/paired-memory-methods.json)
+boundary. The [accepted method map](https://github.com/postmelee/pear-runtime/blob/master/provenance/paired-memory-methods.json)
 does not turn selected-input semantics into generic future enforcement.
 
 Pear development prepare/select/inspect and selection-metadata recovery passed.
