@@ -108,4 +108,10 @@ D37 and separate observation research retain their previous owners and status.
 This does not establish gameplay, complete Rosetta-independence coverage or
 public distribution, or authorize activation or artifact deletion.
 
-The linked Pear documents are pinned to the accepted Stage 5.2 checkpoint. Their public reachability awaits authorized publication of Pear ancestry; the local reviewed checkout contains those exact files.
+The linked Pear documents retain the accepted Stage 5.2 checkpoint.
+[Pear PR #58](https://github.com/postmelee/pear/pull/58) merged at
+`26927fa2cc4e5d606ac02f2c1c1eceb54e83f60e`; its corrected selector and manual-confirmation
+source is `400da1145b20ff787ad30b251ea5c810ed291c29`. Use the
+[current official development guide](https://github.com/postmelee/pear/blob/master/docs/development/rosetta-free.md)
+for current binding instructions. These documentation links do not replace the
+historical component build/source pins above.
