@@ -9,8 +9,8 @@ The selected reconstruction uses fork commit `1b76db6902345388c589ba3909b22badf7
 reviewed recipe names them. Preserve this lock and its original receipts; do not
 substitute a current branch tip or a dirty test checkout for the historical pin.
 The later Stage 4 fixture/test checkpoint is `d31a50d7385b3385ab278e0fe7687b9d1267de94`;
-[its report](../mydocs/working/task_m1_56_stage4.md) is published with that
-private checkpoint; collaborator access is required.
+[its report](../mydocs/working/task_m1_56_stage4.md) was originally published with that
+private checkpoint.
 
 ## Source checks available now
 
@@ -68,13 +68,13 @@ prefixes, owned image/spec inputs and signing material are not stored here.
 
 `pear-runtime/include/PearAbortObservation.h` is a generated build input owned by the common runtime. This fork intentionally does not track another copy. Wine exports `include/wine/pear_fex_memory.h` and the v1/v2 typed graphics provider headers. DXMT owns its upstream `winemetal.h` and `winemetal_thunks.h`; the Wine copies are pinned consumer mirrors.
 
-Canonical provider paths and exact digests are in the manifest. The existing owners accepted this fork as the single future editable authority for its selected range; frozen historical patches remain provenance. The [canonical cutover record](https://github.com/postmelee/pear-runtime/blob/codex/task56/provenance/source-cutover-task56.json) binds the exact reviewed commits and ownership scope. This local acceptance does not activate a runtime, renew historical build pins or release retained inputs. Final private publication refs are recorded separately in the Pear Task #56 handoff.
+Canonical provider paths and exact digests are in the manifest. The existing owners accepted this fork as the single future editable authority for its selected range; frozen historical patches remain provenance. The [canonical cutover record](https://github.com/postmelee/pear-runtime/blob/codex/task56/provenance/source-cutover-task56.json) binds the exact reviewed commits and ownership scope. This local acceptance does not activate a runtime, renew historical build pins or release retained inputs. Historical private publication refs are recorded separately in the Pear Task #56 handoff.
 
 ## Licensing and contributions
 
 Upstream Wine/DXMT LGPL terms and existing MIT or other per-file notices remain unchanged. Copied/adapted inputs retain their original attribution and version-specific component notices. New original scripts/tests under `pear/` carry GPL-3.0-or-later SPDX notices; [COPYING](COPYING) supplies that license text and does not relicense the imported component.
 
-DXMT's upstream contribution policy rejects AI-generated/co-authored contributions. This private downstream work does not authorize an upstream submission, rewrite upstream authorship or claim upstream acceptance. Preserve the original contribution policy.
+DXMT's upstream contribution policy rejects AI-generated/co-authored contributions. This downstream work does not authorize an upstream submission, rewrite upstream authorship or claim upstream acceptance. Preserve the original contribution policy.
 
 ## Related repositories and limits
 
@@ -84,7 +84,7 @@ DXMT's upstream contribution policy rejects AI-generated/co-authored contributio
 - [pear-runtime](https://github.com/postmelee/pear-runtime): compatible composition, build, verification and recovery.
 - [Pear](https://github.com/postmelee/pear): app/Steam/game policy and development selection.
 
-These component repositories require collaborator access. Source validation,
+These component source repositories are publicly readable. Source validation,
 compilation, synthetic runtime tests, game qualification and public distribution
 remain separate claims. The selected reconstruction and candidate3's four native
 controls, three bootstrap controls, seven-fixture batch and eighteen-frame
